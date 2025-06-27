@@ -1,57 +1,61 @@
-# AI Assistant with Function Calling and MCP Integration
+# Unlock Your Agents' Potential with Model Context Protocol PostgreSQL Workshop
 
-A modular, async-friendly AI chatbot that demonstrates the integration of Model Context Protocol (MCP) tools with local AI models. This project showcases how to build a sales analysis agent for Zava (a fictional outdoor gear retailer) using function calling capabilities with a locally hosted AI model.
+A comprehensive workshop demonstrating how to integrate Model Context Protocol (MCP) tools with Azure AI Agents to build powerful sales analysis capabilities. This project showcases a complete enterprise-grade sales intelligence system for Zava, a fictional DIY/outdoor gear retailer.
 
-## 📊 Scenario
+## 📊 Workshop Scenario
 
-Imagine you are a sales manager at Zava, a multinational retail company that sells outdoor equipment. You need to analyze sales data to find trends, understand customer preferences, and make informed business decisions. To help you, Zava has developed a conversational agent that can answer questions about your sales data.
+You are a sales manager at **Zava**, a multinational DIY and outdoor gear retailer. Your company has built a sophisticated conversational agent powered by Azure AI Agents to help analyze sales data, understand customer preferences, and make data-driven business decisions.
 
 ![banner](media/banner.png)
 
-This project demonstrates how such an agent works behind the scenes, combining the power of local AI models with database tools through the Model Context Protocol.
+This workshop demonstrates how to build such an agent from scratch, combining the power of Azure AI Agents with a comprehensive PostgreSQL database through the Model Context Protocol.
 
-## 🚀 Features
+## 🚀 Key Features
 
-- **Local AI Model**: Uses the `ai/phi4:14B-Q4_0` model hosted with Docker Model Runner
-- **MCP Integration**: Implements Model Context Protocol for tool communication
-- **Database Analysis**: SQLite database queries for sales data analysis
-- **Function Calling**: Advanced AI function calling capabilities
-- **Async Architecture**: Fully asynchronous implementation for better performance
-- **Sales Analytics**: Specialized tools for analyzing Zava sales data
+- **Azure AI Agents**: Modern, cloud-native AI agent framework with streaming capabilities
+- **MCP Integration**: Industry-standard Model Context Protocol for tool communication
+- **PostgreSQL Database**: Enterprise-grade database with pgvector extension for AI operations
+- **Comprehensive Data**: 50K+ customers, 300+ products, 200K+ orders with realistic business patterns
+- **Vector Search**: AI-powered product search capabilities with embeddings
+- **Performance Optimized**: Indexed database with sub-second query performance
+- **Multi-language Support**: Localized responses in multiple languages
+- **Development Container**: Complete containerized development environment
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   AI Assistant  │    │   MCP Client    │    │   MCP Server    │
-│   (main.py)     │◄──►│ (mcp_client.py) │◄──►│ (zava_mcp_server.py) │
-│                 │    └─────────────────┘    └─────────────────┘
-│ ┌─────────────┐ │                                     │
-│ │ OpenAI      │ │                                     ▼
-│ │ Client      │ │                            ┌─────────────────┐
-│ │ Interface   │ │                            │   Sales Data    │
-│ └─────────────┘ │                            │ (sales_data.py) │
-└─────────────────┘                            └─────────────────┘
-         │                                               │
-         ▼                                               ▼
-┌─────────────────┐                            ┌─────────────────┐
-│ Docker Model    │                            │ SQLite Database │
-│ Runner (Local)  │                            │ (zava-sales) │
-└─────────────────┘                            └─────────────────┘
+┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
+│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
+│                     │    └─────────────────┘    └─────────────────┘
+│ ┌─────────────────┐ │                                     │
+│ │ Azure AI        │ │                                     ▼
+│ │ Agents Service  │ │                          ┌─────────────────┐
+│ │ + Streaming     │ │                          │  PostgreSQL     │
+│ └─────────────────┘ │                          │  Database       │
+└─────────────────────┘                          │  + pgvector     │
+         │                                       └─────────────────┘
+         ▼                                                 │
+┌─────────────────────┐                                   ▼
+│ Azure OpenAI        │                         ┌─────────────────┐
+│ Model Deployment    │                         │ 8 Normalized    │
+│ (GPT-4, etc.)       │                         │ Tables with     │
+└─────────────────────┘                         │ Performance     │
+                                                │ Indexes         │
+                                                └─────────────────┘
 ```
 
 ## 📋 Prerequisites
 
-- **Python 3.8+**
-- **Docker Desktop 4.42+** with Docker Model Runner enabled
-- **System Requirements**: The Phi4 14B model requires significant resources:
-  - Recommended: 16GB+ RAM
-  - GPU acceleration supported on Apple Silicon (macOS) and NVIDIA GPUs (Windows)
-- **Docker Model Runner**: See setup instructions below
+- **Azure Subscription** with access to Azure AI Foundry and Azure OpenAI
+- **Python 3.11+** (Python 3.13 recommended)
+- **Docker Desktop 4.42+** 
+- **VS Code** with Dev Containers extension
+- **Git** for version control
 
-## 🛠️ Installation
+## 🛠️ Quick Start
 
-### Development Container Setup (Recommended)
+### Option 1: Development Container (Recommended)
 
 **Prerequisites:**
 - Docker Desktop
@@ -60,226 +64,465 @@ This project demonstrates how such an agent works behind the scenes, combining t
 **Setup:**
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop.git
    cd "Unlock your agents potential with Model Context Protocol PostgreSQL Workshop"
    ```
 
-2. **Open in Dev Container**:
+2. **Configure Environment**:
+   - Copy `.env.example` to `.env`
+   - Fill in your Azure AI Foundry project details:
+     ```bash
+     PROJECT_ENDPOINT=<your-azure-ai-foundry-endpoint>
+     MODEL_DEPLOYMENT_NAME=<your-model-deployment-name>
+     AZURE_BING_CONNECTION_ID=<your-bing-connection-id>
+     ```
+
+3. **Open in Dev Container**:
    - Open the folder in VS Code
    - When prompted, click "Reopen in Container" or use Command Palette → "Dev Containers: Reopen in Container"
    - The PostgreSQL database will automatically start and restore data
 
-3. **That's it!** The dev container includes:
+4. **That's it!** The dev container includes:
    - Python 3.13 environment with all dependencies
-   - PostgreSQL database with automatically restored data (50K customers, 199K orders)
-   - pgvector extension for AI vector operations
-   - All necessary VS Code extensions
+   - PostgreSQL 17 database with pgvector extension
+   - Automatically restored Zava retail database (~50K customers, 200K orders)
+   - All necessary VS Code extensions and tools
 
-   **Database Features:**
-   - 50,000+ customers across 7 regions  
-   - 294+ products in 7 categories
-   - ~200,000 orders with realistic business patterns
-   - Vector embeddings for AI-powered product search
-   - Performance-optimized indexes for fast queries
+### Option 2: Local Development
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop.git
+   ```
+   cd "Unlock your agents potential with Model Context Protocol PostgreSQL Workshop"
+   ```
+
+1. Create a Python virtual environment:
+
+   On Windows:
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows use: venv\Scripts\activate
+   ```
+
+   On macOS/Linux:
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
+2. **Setup PostgreSQL**:
+   ```bash
+   docker-compose up -d db
+   ```
+
+3. **Configure Environment** (same as Option 1)
+
+## 🎓 Workshop Learning Objectives
+
+By completing this workshop, you will learn:
+
+1. **Azure AI Agents**: How to build and deploy conversational agents using Azure AI Foundry
+2. **Model Context Protocol**: Industry-standard protocol for AI tool integration
+3. **Database Design**: Normalized database schema with performance optimization
+4. **Streaming Responses**: Real-time agent interactions with live updates
+5. **Enterprise Patterns**: Production-ready code structure and error handling
 
 ## 🚀 Usage
 
-### Using Development Container
+### Running the Sales Analysis Agentß
 
-Once you have the dev container running:
+Once you have the development environment set up:
 
-1. **Start the AI Assistant**:
+1. **Start the Agent**:
+
+   Press `F5` in VS Code or run the following command in the terminal:
 
    ```bash
    cd /workspace/src/python/workshop
    python main.py
    ```
 
-2. **Interact with the Assistant**:
+2. **Interact with the Agent**:
+   The agent supports rich streaming conversations with real-time responses:
 
-   ```shell
-   🤖 AI Assistant Ready!
-   Type 'exit' to quit.
-   Available tools: get_database_schema, fetch_sales_data_using_sqlite_query
+   ```
+   🤖 Zava Sales Analysis Agent Ready!
+   Connected to Azure AI Foundry
+   Available tools: PostgreSQL schema tools + sales query execution
    =========================================================================
    
-   You: What were the total sales by region in 2022?
+   You: What were our top-selling product categories last quarter?
+   
+   Agent: Let me analyze your sales data...
+   [Real-time streaming response with formatted tables and insights]
    ```
 
-3. **Example Queries**:
-   - "help"
-   - "Show me total revenue by product category"
-   - "What were the top performing regions in 2023?"
-   - "Find products similar to 'camping tent'"
+3. **Example Queries to Try**:
+   - **Sales Performance**: "Show me revenue by product category for 2024 as a bar chart"
+   - **Regional Analysis**: "Which stores performed best last quarter?"
+   - **Customer Insights**: "Who are our top 10 customers by order value?"
+   - **Product Search**: "Find products similar to camping equipment"
+   - **Trend Analysis**: "Show me seasonal sales patterns"
+   - **Inventory Reports**: "What's our current stock level by store?"
+
+4. **Advanced Features**:
+   - **Multi-language**: Ask questions in different languages for localized responses
+   - **Data Export**: Request data in CSV format (presented as markdown tables)
+   - **Complex Queries**: The agent can join multiple tables and perform sophisticated analysis
 
 ## 📁 Project Structure
 
 ```text
-function_calling_and_mcp/
-├── main.py                 # Main AI assistant application
-├── mcp_client.py          # MCP client for tool communication
-├── zava_mcp_server.py          # MCP server with database tools
-├── sales_data.py          # Database access layer
-├── utilities.py           # Utility functions
-├── terminal_colors.py     # Terminal color formatting
-├── system_msg.txt         # System prompt for the AI
-├── requirements.txt       # Python dependencies
-└── shared/
-    └── database/
-        ├── zava-sales.db          # Original SQLite database
-        ├── zava_retail.db         # Enhanced comprehensive database
-        ├── PERFORMANCE_INTEGRATION.md # Performance optimization docs
-        ├── sales_data.sqbpro         # Database project file
-        └── data-generator/
-            ├── generate_customer_db.py   # Comprehensive database generator
-            ├── generate_sql.py          # Legacy data generation script
-            └── populate_sales_data.sql  # Legacy SQL data file
+workshop/
+├── src/python/workshop/           # Main application code
+│   ├── main.py                   # Azure AI Agent orchestrator
+│   ├── mcp_client.py            # MCP client for tool communication
+│   ├── mcp_server.py            # MCP server with database tools
+│   ├── sales_data_postgres.py   # PostgreSQL database access layer
+│   ├── config.py                # Configuration management
+│   ├── stream_event_handler.py  # Real-time streaming handler
+│   ├── terminal_colors.py       # Terminal output formatting
+│   └── utilities.py             # Common utilities
+├── src/shared/                   # Shared resources
+│   ├── database/                # Database files and tools
+│   │   ├── zava_retail_2025_05_27_postgres.backup  # Database backup
+│   │   └── data-generator/      # Database generation scripts
+│   │       ├── generate_zava_postgres.py  # PostgreSQL generator
+│   │       ├── generate_customer_db.py    # SQLite generator (legacy)
+│   │       ├── product_data.json         # Product catalog
+│   │       └── reference_data.json       # Store and reference data
+│   ├── instructions/            # Agent instruction files
+│   │   ├── function_calling.txt # Sales agent instructions
+│   │   └── code_interpreter.txt # Code interpreter instructions
+│   └── images/                  # Product images (300+ items)
+├── infra/                       # Azure infrastructure (Bicep templates)
+├── scripts/                     # Utility scripts
+├── .devcontainer/              # Development container configuration
+├── docker-compose.yml          # PostgreSQL database service
+├── pyproject.toml              # Python project configuration
+└── requirements-dev.txt        # Python dependencies
 ```
 
 ## 🧩 Key Components
 
-### AIAssistant (main.py)
+### Azure AI Agent (main.py)
 
-The main orchestrator that:
+The main orchestrator using Azure AI Foundry:
 
-- Manages conversation flow
-- Coordinates with MCP tools
-- Handles function calling
-- Integrates with the local AI model
+- **Agent Management**: Creates and manages conversational agents
+- **Streaming Responses**: Provides real-time, token-by-token responses
+- **MCP Integration**: Dynamically loads and manages MCP tools
+- **Error Handling**: Comprehensive error handling and graceful degradation
+- **Multi-language Support**: Handles localized responses
 
-### MCPClient (mcp_client.py)
+### MCP Client (mcp_client.py)
 
-Handles communication with MCP servers:
+Handles communication with MCP servers following the MCP specification:
 
-- Establishes connections to MCP servers
-- Executes tool calls
-- Manages tool schemas
+- **Session Management**: Persistent connections to MCP servers
+- **Tool Discovery**: Automatically discovers available tools
+- **Function Mapping**: Maps MCP tools to Azure AI Agent functions
+- **Async Operations**: Full async support for optimal performance
 
-### MCPServer (zava_mcp_server.py)
+### MCP Server (mcp_server.py)
 
-Provides tools for database access:
+Provides comprehensive database access tools:
 
-- `get_database_schema`: Returns database structure information
-- `fetch_sales_data_using_sqlite_query`: Executes SQL queries on sales data
+- **Schema Tools**: Individual table schema inspection
+  - `get_customers_table_schema`
+  - `get_products_table_schema`
+  - `get_orders_table_schema`
+  - `get_order_items_table_schema`
+  - `get_categories_table_schema`
+  - `get_product_types_table_schema`
+  - `get_stores_table_schema`
+  - `get_inventory_table_schema`
+- **Query Execution**: `execute_sales_query` for PostgreSQL operations
+- **Safety Features**: Query validation and result limiting
 
-### SalesData (sales_data.py)
+### PostgreSQL Database Layer (sales_data_postgres.py)
 
-Database access layer providing:
+Enterprise-grade database access:
 
-- Async SQLite connections
-- Schema introspection
-- Sales data querying
-- Data validation and formatting
+- **Connection Management**: Async PostgreSQL connections with pooling
+- **Schema Introspection**: Dynamic table metadata discovery
+- **Query Execution**: Parameterized queries with result formatting
+- **Performance Optimization**: Indexed queries and connection reuse
+
+### Stream Event Handler (stream_event_handler.py)
+
+Real-time response handling:
+
+- **Token Streaming**: Live token-by-token response rendering
+- **Event Processing**: Handles various Azure AI Agent events
+- **Progress Indicators**: Visual feedback during long operations
+- **Error Display**: Real-time error reporting and handling
 
 ## 🔧 Configuration
 
-### Model Configuration
+### Azure Configuration
 
-Edit the `ModelConfig` in `main.py`:
+Configure your Azure AI Foundry connection in `.env`:
 
-```python
-@dataclass
-class ModelConfig:
-    base_url: str = "http://localhost:12434/engines/llama.cpp/v1"
-    api_key: str = "docker"
-    model_name: str = "ai/phi4:14B-Q4_0"
-    max_tokens: int = 4096
+```bash
+# Azure AI Foundry Project
+PROJECT_ENDPOINT=https://your-project.region.api.azureml.ms
+MODEL_DEPLOYMENT_NAME=gpt-4
+AZURE_BING_CONNECTION_ID=your-bing-connection-id
+
+# Optional: PostgreSQL Configuration (defaults work with dev container)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=zava
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=P@ssw0rd!
+POSTGRES_SCHEMA=retail
 ```
 
-### Database Configuration
+### Agent Configuration
 
-The database path is configured in `sales_data.py`:
+The agent behavior is configured in `config.py`:
 
 ```python
-DATA_BASE = "database/zava-sales.db"
+class Config:
+    AGENT_NAME = "Contoso Sales Agent"
+    MAX_COMPLETION_TOKENS = 10240
+    MAX_PROMPT_TOKENS = 20480
+    TEMPERATURE = 0.1  # Low for deterministic SQL generation
+    TOP_P = 0.1
 ```
+
+### MCP Server Configuration
+
+The MCP server automatically connects to PostgreSQL using environment variables and provides these tools:
+
+- Schema inspection tools for all 8 database tables
+- SQL query execution with safety validation
+- Result formatting and error handling
 
 ## 📊 Database Schema
 
-The zava sales database contains a single table with comprehensive sales transaction data:
+The Zava retail database is a normalized PostgreSQL database with comprehensive business data:
 
-### Table: `sales_data`
+### Core Tables
 
-**Columns:**
+**stores**: Store locations and identifiers
+- `store_id` (Primary Key)
+- `store_name` (Seattle, New York, London, etc.)
 
-- `id`: INTEGER (Primary key)
-- `main_category`: TEXT (Product category)
-- `product_type`: TEXT (Specific product type)
-- `revenue`: REAL (Sales revenue in dollars)
-- `shipping_cost`: REAL (Shipping cost in dollars)
-- `number_of_orders`: INTEGER (Number of orders)
-- `year`: INTEGER (Year of transaction)
-- `month`: INTEGER (Month number 1-12)
-- `discount`: INTEGER (Discount percentage)
-- `region`: TEXT (Geographic region)
-- `month_date`: TEXT (Month name)
+**customers**: Customer information (50,000+ records)
+- `customer_id` (Primary Key)
+- `first_name`, `last_name`, `email`, `phone`
 
-### Available Data Values
+**categories**: Product category master data
+- `category_id` (Primary Key) 
+- `category_name` (Camping & Hiking, Apparel, etc.)
 
-**Regions (7):**
-AFRICA, ASIA-PACIFIC, CHINA, EUROPE, LATIN AMERICA, MIDDLE EAST, NORTH AMERICA
+**product_types**: Product subcategories
+- `type_id` (Primary Key)
+- `category_id` (Foreign Key)
+- `type_name` (Tents, Backpacks, Boots, etc.)
 
-**Product Categories (8):**
-APPAREL, CAMPING & HIKING, CLIMBING, FISHING GEAR, FOOTWEAR, TRAVEL, WATER GEAR, WINTER SPORTS
+**products**: Product catalog (300+ products)
+- `product_id` (Primary Key)
+- `sku`, `product_name`, `base_price`
+- `category_id`, `type_id` (Foreign Keys)
+- `product_description`
 
-**Product Types (80+):**
-ACCESSORIES, AVALANCHE SAFETY, BACKPACKING TENTS, BINDINGS, BIVYS, BOULDERING PADS, CANOES, CARABINERS & QUICKDRAWS, CARRY-ONS, CHALK & CHALK BAGS, CLIMBING SHOES, COOKWARE, CRAMPONS, DAYPACKS, DRY BAGS, DUFFEL BAGS, EXTENDED TRIP PACKS, EYE MASKS, FAMILY CAMPING TENTS, FIRST AID KITS, FISHING BAIT, FISHING HOOKS, FISHING LINE, FOOD & NUTRITION, FOOTWEAR ACCESSORIES, FOOTWEAR CARE PRODUCTS, GLOVES & HATS, GLOVES & MITTENS, GOGGLES, HAMMOCKS, HARNESSES, HELMETS, HIKING BOOTS, HYDRATION PACKS, ICE AXES, INSULATED FOOTWEAR, JACKETS & VESTS, KAYAKS, LINERS, LUGGAGE LOCKS, MOUNTAINEERING BOOTS, NAVIGATION TOOLS, OUTERWEAR, OVERNIGHT PACKS, PACKING ORGANIZERS, PADDLES, PANTS & SHORTS, POLES, RASH GUARDS, RODS & REELS, ROPES & SLINGS, SAFETY GEAR, SANDALS, SHELTERS & TARPS, SHIRTS, SKI BINDINGS, SKI BOOTS, SKI POLES, SKIS, SLACKLINES, SLEEPING BAGS, SLEEPING PADS, SNORKELING & DIVING GEAR, SNOWBOARD BOOTS, SNOWBOARDS, SNOWSHOES, STOVES, SURF ACCESSORIES, SURFBOARDS, SWIMWEAR, TACKLE, TECH ORGANIZERS, THERMAL UNDERWEAR, TOPS, TRAIL SHOES, TRAINING EQUIPMENT, TRAVEL ACCESSORIES, TRAVEL BACKPACKS, TRAVEL PILLOWS, UNDERWEAR & BASE LAYERS, UTENSILS & ACCESSORIES, WADERS, WATER FILTRATION & PURIFICATION, WETSUITS, WINTER BOOTS
+### Transaction Tables
 
-**Years:** 2022, 2023, 2024
+**orders**: Order headers (200,000+ records)
+- `order_id` (Primary Key)
+- `customer_id`, `store_id` (Foreign Keys)
+- `order_date`
 
-**Months:** 1-12 (January through December)
+**order_items**: Line-item details with pricing
+- `order_item_id` (Primary Key)
+- `order_id`, `product_id` (Foreign Keys)
+- `quantity`, `unit_price`, `discount_percent`, `total_amount`
 
-## 🎯 Use Cases
+**inventory**: Stock levels by store and product
+- `store_id`, `product_id` (Composite Primary Key)
+- `stock_level`
 
-1. **Sales Analysis**: Query and analyze sales performance across different dimensions
-2. **Business Intelligence**: Generate insights from sales data
-3. **Reporting**: Create automated reports for stakeholders
-4. **Trend Analysis**: Identify sales patterns and trends
-5. **MCP Development**: Learn how to integrate MCP tools with AI assistants
+### Data Distribution
 
-## 🛡️ Error Handling
+**Geographic Coverage**: 7 global regions
+- North America, Europe, Asia-Pacific, China, Latin America, Middle East, Africa
 
-The application includes comprehensive error handling:
+**Product Categories**: 8 main categories
+- Camping & Hiking, Apparel, Footwear, Water Gear, Winter Sports, Climbing, Fishing Gear, Travel
 
-- Database connection failures
-- MCP server communication errors
-- Invalid SQL queries
-- Model response errors
-- Graceful degradation when tools are unavailable
+**Time Range**: 2022-2024 with realistic seasonal patterns
+- Higher outdoor gear sales in spring/summer
+- Increased winter sports equipment in fall/winter
+- Holiday shopping spikes in Q4
+
+**Performance Features**:
+- 20+ optimized indexes for fast query performance
+- Realistic business patterns and data relationships
+- pgvector extension for AI-powered product search capabilities
+
+## 🎯 Workshop Exercises
+
+### Exercise 1: Basic Agent Setup
+- Configure Azure AI Foundry connection
+- Start the development container
+- Run your first agent conversation
+
+### Exercise 2: Database Exploration
+- Understand the normalized database schema
+- Use schema tools to explore table structures
+- Execute basic queries through the agent
+
+### Exercise 3: MCP Tool Development
+- Examine the MCP server implementation
+- Understand tool registration and execution
+- Extend the server with custom tools
+
+### Exercise 4: Advanced Queries
+- Build complex multi-table joins
+- Implement aggregation and analytics queries
+- Handle error cases and edge conditions
+
+### Exercise 5: Agent Customization
+- Modify agent instructions and behavior
+- Implement custom response formatting
+- Add multi-language support
+
+### Exercise 6: Production Considerations
+- Implement proper error handling
+- Add monitoring and logging
+- Scale for enterprise deployment
+
+## 🛡️ Error Handling & Best Practices
+
+The workshop demonstrates enterprise-grade error handling:
+
+### Database Layer
+- **Connection Resilience**: Automatic reconnection and connection pooling
+- **Query Validation**: SQL injection prevention and syntax validation
+- **Result Limiting**: Automatic LIMIT enforcement to prevent large result sets
+- **Transaction Management**: Proper commit/rollback handling
+
+### MCP Layer
+- **Session Management**: Graceful session creation and cleanup
+- **Tool Discovery**: Dynamic tool loading with fallback behavior
+- **Error Propagation**: Clear error messages from MCP server to agent
+
+### Agent Layer
+- **Streaming Errors**: Real-time error display during streaming responses
+- **Graceful Degradation**: Agent continues operating when tools are unavailable
+- **User Feedback**: Clear, actionable error messages for users
+
+### Production Patterns
+- **Async Operations**: Non-blocking I/O throughout the stack
+- **Resource Management**: Proper cleanup of connections and sessions
+- **Logging**: Structured logging for debugging and monitoring
+- **Configuration Management**: Environment-based configuration
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+This workshop is designed for learning and experimentation:
+
+1. **Fork the repository** to your own GitHub account
+2. **Create a feature branch** for your experiments
+3. **Make your changes** to explore different approaches
+4. **Document your learnings** in comments or additional README files
+5. **Share your insights** with the community
+
+### Workshop Extensions
+
+Consider these advanced exercises:
+- Add vector search capabilities using pgvector
+- Implement caching for frequently accessed data
+- Create additional MCP tools for other business functions
+- Add authentication and authorization
+- Build a web interface for the agent
+
+## � Additional Resources
+
+### Azure AI Foundry
+- [Azure AI Foundry Documentation](https://docs.microsoft.com/azure/ai-services/)
+- [Azure OpenAI Service](https://docs.microsoft.com/azure/openai/)
+- [Azure AI Agents SDK](https://github.com/azure/azure-ai-agents)
+
+### Model Context Protocol
+- [MCP Specification](https://modelcontextprotocol.io/)
+- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
+- [MCP Examples](https://github.com/modelcontextprotocol/examples)
+
+### PostgreSQL & pgvector
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [pgvector Extension](https://github.com/pgvector/pgvector)
+- [PostgreSQL Performance Tuning](https://wiki.postgresql.org/wiki/Performance_Optimization)
 
 ## 📝 License
 
-This project is provided as an example implementation for educational purposes.
+This workshop is provided for educational purposes under the MIT License. The Zava company and sales data are fictional and created specifically for this learning experience.
 
 ## 🆘 Troubleshooting
 
 ### Common Issues
 
-1. **Docker Model Runner Connection**:
-   - Ensure Docker Model Runner is running on port 12434
-   - Verify the model `ai/phi4:14B-Q4_0` is loaded
+**1. Azure Authentication Errors**
+```bash
+# Ensure you're logged in to Azure CLI
+az login --use-device-code
+az account set --subscription <your-subscription-id>
+```
 
-1. **Function Calling Issues**:
-   - Verify the AI model supports function calling
-   - Check tool schema formatting
+**2. Database Connection Issues**
+```bash
+# Check if PostgreSQL container is running
+docker-compose ps
+docker-compose logs db
+
+# Restart the database service
+docker-compose restart db
+```
+
+**3. MCP Server Communication Errors**
+- Verify the MCP server starts correctly: `python mcp_server.py`
+- Check for Python environment issues: `pip install -r requirements-dev.txt`
+- Ensure all environment variables are set correctly
+
+**4. Agent Deployment Issues**
+- Verify your Azure AI Foundry project endpoint is correct
+- Check that your model deployment name matches the configuration
+- Ensure your Azure OpenAI deployment has sufficient quota
 
 ### Getting Help
 
-If you encounter issues:
+If you encounter issues during the workshop:
 
-1. Check the terminal output for error messages
-2. Verify all dependencies are installed
-3. Ensure the Docker Model Runner is properly configured
-4. Review the logs for debugging information
+1. **Check the Logs**: Review terminal output and error messages
+2. **Verify Prerequisites**: Ensure all required tools and services are installed
+3. **Environment Setup**: Double-check your `.env` file configuration
+4. **Database Status**: Confirm the PostgreSQL database is running and accessible
+5. **Azure Connectivity**: Test your Azure AI Foundry connection
+
+### Debug Mode
+
+Enable verbose logging for troubleshooting:
+
+```python
+# In main.py, change logging level
+logging.basicConfig(level=logging.DEBUG)
+```
 
 ---
 
-**Note**: This is a demonstration project showcasing MCP integration with local AI models. The Zava company and sales data are fictional and used for educational purposes.
+**Workshop Goal**: Master the integration of Azure AI Agents with Model Context Protocol tools to build enterprise-grade conversational AI systems that can intelligently interact with complex data sources.
+
+**Learning Path**: From basic agent setup → MCP tool integration → database operations → production patterns → advanced customization.
+
+**Next Steps**: After completing this workshop, you'll be ready to build your own AI agents that can integrate with any data source or business system through the Model Context Protocol.
