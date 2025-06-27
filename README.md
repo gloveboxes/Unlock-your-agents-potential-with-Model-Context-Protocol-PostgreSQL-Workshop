@@ -28,14 +28,14 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 │   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
 │   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
 │                     │    └─────────────────┘    └─────────────────┘
-│ ┌─────────────────┐ │                                     │
-│ │ Azure AI        │ │                                     ▼
+│ ┌─────────────────┐ │                                   │
+│ │ Azure AI        │ │                                   ▼
 │ │ Agents Service  │ │                          ┌─────────────────┐
 │ │ + Streaming     │ │                          │  PostgreSQL     │
 │ └─────────────────┘ │                          │  Database       │
 └─────────────────────┘                          │  + pgvector     │
          │                                       └─────────────────┘
-         ▼                                                 │
+         ▼                                                │
 ┌─────────────────────┐                                   ▼
 │ Azure OpenAI        │                         ┌─────────────────┐
 │ Model Deployment    │                         │ 8 Normalized    │
