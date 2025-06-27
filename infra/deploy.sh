@@ -6,7 +6,7 @@ echo "Deploying the Azure resources..."
 RG_LOCATION="eastus"
 MODEL_NAME="gpt-4o"
 MODEL_VERSION="2024-11-20"
-AI_PROJECT_FRIENDLY_NAME="Agent Service Workshop"
+AI_PROJECT_FRIENDLY_NAME="Zava Agent Service Workshop"
 MODEL_CAPACITY=140
 
 # Deploy the Azure resources and save output to JSON

@@ -2,7 +2,7 @@ targetScope = 'subscription'
 
 // Parameters
 @description('Prefix for the resource group and resources')
-param resourcePrefix string = 'agent-workshop'
+param resourcePrefix string = 'zava-agent-workshop'
 
 @description('Location of the resource group to create or use for the deployment')
 param location string = 'eastus'
@@ -10,7 +10,7 @@ param location string = 'eastus'
 @description('Friendly name for your Azure AI resource')
 param aiProjectFriendlyName string = 'Agents standard project resource'
 
-@description('Description of your Azure AI resource dispayed in Azure AI Foundry')
+@description('Description of your Azure AI resource displayed in Azure AI Foundry')
 param aiProjectDescription string = 'A standard project resource required for the agent setup.'
 
 @description('Set of tags to apply to all resources.')
