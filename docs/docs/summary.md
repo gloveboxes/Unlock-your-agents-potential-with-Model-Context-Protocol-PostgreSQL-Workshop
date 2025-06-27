@@ -2,9 +2,9 @@
 
 This workshop demonstrated how to leverage the Foundry Agent Service to create a robust conversational agent capable of answering sales-related questions, performing data analysis, generating visualizations, and integrating external data sources for enhanced insights. Here are the key takeaways:
 
-## 1. Function Calling and Dynamic SQL Queries
+## 1. Model Context Protocol (MCP) and Dynamic SQL Queries
 
-- The agent uses the Foundry Agent Service to dynamically generate and execute SQL queries against a read-only SQLite database, enabling it to respond to user questions with accurate data retrieval.
+- The agent uses the Foundry Agent Service to dynamically generate and execute SQL queries against a PostgreSQL database, enabling it to respond to user questions with accurate data retrieval. The MCP Server provides a structured way to manage the conversation context and ensure that the agent can handle complex queries effectively.
 
 ## 2. Context Management
 
@@ -18,9 +18,9 @@ This workshop demonstrated how to leverage the Foundry Agent Service to create a
 
 - The agent can create downloadable files, including Excel, CSV, JSON, and image formats, providing users with flexible options to analyze and share data.
 
-## 5. Grounding with Bing
+## 5. Monitoring and Logging
 
-- By integrating Bing search, the agent can perform grounded searches for competitive product analysis, expanding its insights beyond internal data sources.
+- The Foundry Agent Service includes built-in monitoring and logging capabilities, allowing you to track agent performance, user interactions, and system health. This is crucial for maintaining the reliability and effectiveness of the agent in production environments.
 
 ## 6. Security Best Practices
 
