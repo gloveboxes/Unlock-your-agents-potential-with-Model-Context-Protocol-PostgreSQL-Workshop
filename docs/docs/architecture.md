@@ -27,6 +27,30 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
      
      The Model Context Protocol (MCP) server provides secure, structured access to this data, dynamically generating database schemas and executing optimized queries based on the agent's requests.
 
+### Architecture
+
+```text
+┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
+│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
+│                     │    └─────────────────┘    └─────────────────┘
+│ ┌─────────────────┐ │                                   │
+│ │ Azure AI        │ │                                   ▼
+│ │ Agents Service  │ │                          ┌─────────────────┐
+│ │ + Streaming     │ │                          │  PostgreSQL     │
+│ └─────────────────┘ │                          │  Database       │
+└─────────────────────┘                          │  + pgvector     │
+         │                                       └─────────────────┘
+         ▼                                                │
+┌─────────────────────┐                                   ▼
+│ Azure OpenAI        │                         ┌─────────────────┐
+│ Model Deployment    │                         │ 8 Normalized    │
+│ (GPT-4, etc.)       │                         │ Tables with     │
+└─────────────────────┘                         │ Performance     │
+                                                │ Indexes         │
+                                                └─────────────────┘
+```
+
 ## Extending the Workshop Solution
 
 The workshop solution is highly adaptable to various scenarios, such as customer support, by modifying the database and tailoring the Foundry Agent Service instructions to suit specific use cases. It is intentionally designed to be interface-agnostic, allowing you to focus on the core functionality of the AI Agent Service with MCP integration and apply the foundational concepts to build your own conversational agent.

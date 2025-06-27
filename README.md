@@ -1,5 +1,7 @@
 # Unlock Your Agents' Potential with Model Context Protocol PostgreSQL Workshop
 
+The workshop documentation provides a step-by-step guide to building an AI agent using Azure AI Agents and the Model Context Protocol (MCP) with a PostgreSQL database and is published [here](https://gloveboxes.github.io/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop/).
+
 A comprehensive workshop demonstrating how to integrate Model Context Protocol (MCP) tools with Azure AI Agents to build powerful sales analysis capabilities. This project showcases a complete enterprise-grade sales intelligence system for Zava, a fictional DIY/outdoor gear retailer.
 
 ## 📊 Workshop Scenario
