@@ -8,8 +8,11 @@ nav:
   # - Workshop Setup:
   #   - BUILD Attendees: introduction-event.md
   #   - Self-Guided Learners: introduction-self-guided.md
-  - Lab 3 Intro to the Code Interpreter: lab-3-code_interpreter.md
-  - Lab 6 Finishing Up: finishing-up.md
+  - Lab 1 Introduction to MCP: lab-1-mcp_intro.md
+  - Lab 2 Sales Analysis: lab-2-sales-assistant.md
+  - Lab 3 Visual Product Search: lab-3-visual-search.md
+  - Lab 4 Monitoring: lab-4-monitoring.md
+  - Lab 5 Finishing Up: finishing-up.md
   - Summary: summary.md
   - Resources: resources.md
   # - Deployment: deployment.md

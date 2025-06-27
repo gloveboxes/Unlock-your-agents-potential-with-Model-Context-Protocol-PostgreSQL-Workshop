@@ -4,7 +4,7 @@ That's all for the lab portion of this workshop. Read on for key takeaways and a
 
 If you have a GitHub account, you can "star" this repository to make it easy for you to find again in the future.
 
-* Visit the GitHub repository at: [microsoft/build-your-first-agent-with-azure-ai-agent-service-workshop](https://github.com/microsoft/build-your-first-agent-with-azure-ai-agent-service-workshop){:target="_blank"}
+* Visit the GitHub repository at: [github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop](https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop){:target="_blank"}
 * Log into your GitHub account
 * Click **Star** in the top right
 

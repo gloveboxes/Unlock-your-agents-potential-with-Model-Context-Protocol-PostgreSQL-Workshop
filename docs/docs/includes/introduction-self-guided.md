@@ -30,7 +30,7 @@ The preferred way to run this workshop is using GitHub Codespaces. This option p
 
     Select **Open in GitHub Codespaces** to open the project in GitHub Codespaces.
 
-    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/microsoft/build-your-first-agent-with-azure-ai-agent-service-workshop){:target="_blank"}
+    [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop){:target="_blank"}
 
     !!! Warning "Building the Codespace will take several minutes. You can continue reading the instructions while it builds."
 
@@ -44,7 +44,7 @@ The preferred way to run this workshop is using GitHub Codespaces. This option p
     1. Start Docker Desktop (install it if not already installed)
     2. Select **Dev Containers Open** to open the project in a VS Code Dev Container.
 
-        [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/microsoft/build-your-first-agent-with-azure-ai-agent-service-workshop)
+        [![Open in Dev Containers](https://img.shields.io/static/v1?style=for-the-badge&label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop)
 
     !!! Warning "The process of building the Dev Container, which involves downloading and setting it up on your local system, will take several minutes. During this time, you can continue reading the instructions."
 
