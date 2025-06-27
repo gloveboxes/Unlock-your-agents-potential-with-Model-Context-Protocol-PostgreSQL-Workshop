@@ -93,7 +93,6 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 1. **Clone the repository**:
    ```bash
    git clone https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop.git
-   ```
    cd "Unlock your agents potential with Model Context Protocol PostgreSQL Workshop"
    ```
 
