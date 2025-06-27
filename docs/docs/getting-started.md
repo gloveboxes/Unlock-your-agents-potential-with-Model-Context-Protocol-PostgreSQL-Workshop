@@ -2,9 +2,9 @@
 
 Select your workshop experience:
 
-=== "@Build Workshop"
+<!-- === "@Build Workshop"
 
-    {% include-markdown "includes/introduction-event.md" %}
+    {% include-markdown "includes/introduction-event.md" %} -->
 
 === "Self-Guided Learners"
 
