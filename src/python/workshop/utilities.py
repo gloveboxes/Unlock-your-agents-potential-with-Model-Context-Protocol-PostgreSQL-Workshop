@@ -23,13 +23,9 @@ class Utilities:
             return credential
         except ClientAuthenticationError as e:
             print(f"{tc.BG_BRIGHT_RED}❌ Azure Authentication Failed{tc.RESET}")
-            print("\n🔧 To fix this issue, please run one of the following commands:")
-            print(f"{tc.CYAN}Option 1 - Azure CLI (Recommended):{tc.RESET}")
-            print("   az login")
-            print(f"{tc.CYAN}Option 2 - Azure Developer CLI:{tc.RESET}")
-            print("   azd auth login")
-            print(f"{tc.CYAN}Option 3 - Set environment variables:{tc.RESET}")
-            print("   AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID")
+            print("\n🔧 To fix this issue, please run the following command:")
+            print(f"{tc.CYAN}Azure CLI:{tc.RESET}")
+            print("   az login --use-device-code")
             print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
             raise e
         
