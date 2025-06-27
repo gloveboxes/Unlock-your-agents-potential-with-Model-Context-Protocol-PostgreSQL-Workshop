@@ -60,26 +60,6 @@ async def add_agent_tools() -> None:
     return
 
 
-async def validate_azure_authentication() -> DefaultAzureCredential:
-    """Validate Azure authentication before proceeding."""
-    try:
-        credential = DefaultAzureCredential()
-        # Test credential by getting a token
-        token = await credential.get_token("https://management.azure.com/.default")
-        return credential
-    except ClientAuthenticationError as e:
-        print(f"{tc.BG_BRIGHT_RED}❌ Azure Authentication Failed{tc.RESET}")
-        print("\n🔧 To fix this issue, please run one of the following commands:")
-        print(f"{tc.CYAN}Option 1 - Azure CLI (Recommended):{tc.RESET}")
-        print("   az login")
-        print(f"{tc.CYAN}Option 2 - Azure Developer CLI:{tc.RESET}")
-        print("   azd auth login")
-        print(f"{tc.CYAN}Option 3 - Set environment variables:{tc.RESET}")
-        print("   AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID")
-        print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
-        raise e
-
-
 async def initialize() -> tuple[Agent | None, AgentThread | None]:
     """Initialize the agent with the MCP tools and instructions."""
 
@@ -154,7 +134,7 @@ async def post_message(thread_id: str, content: str, agent: Agent, thread: Agent
                     project_client
                     if project_client is not None
                     else AIProjectClient(
-                        credential=await validate_azure_authentication(),
+                        credential=await utilities.validate_azure_authentication(),
                         endpoint=Config.PROJECT_ENDPOINT,
                     )
                 ),
@@ -187,7 +167,7 @@ async def main() -> None:
 
         # Validate Azure authentication
         print("🔐 Validating Azure authentication...")
-        credential = await validate_azure_authentication()
+        credential = await utilities.validate_azure_authentication()
         print("✅ Azure authentication successful!")
 
         # Create clients after authentication is validated
@@ -241,7 +221,7 @@ async def main() -> None:
                 print("The agent resources have been cleaned up.")
 
     except ClientAuthenticationError:
-        # Authentication error already handled in validate_azure_authentication
+        # Authentication error already handled in utilities.validate_azure_authentication
         return
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")

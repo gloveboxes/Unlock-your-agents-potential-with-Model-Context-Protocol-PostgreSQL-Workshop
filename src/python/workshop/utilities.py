@@ -2,6 +2,8 @@ from pathlib import Path
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import ThreadMessage
+from azure.core.exceptions import ClientAuthenticationError
+from azure.identity.aio import DefaultAzureCredential
 from terminal_colors import TerminalColors as tc
 
 
@@ -11,6 +13,25 @@ class Utilities:
     def shared_files_path(self) -> Path:
         """Get the path to the shared files directory."""
         return Path(__file__).parent.parent.parent.resolve() / "shared"
+
+    async def validate_azure_authentication(self) -> DefaultAzureCredential:
+        """Validate Azure authentication before proceeding."""
+        try:
+            credential = DefaultAzureCredential()
+            # Test credential by getting a token
+            token = await credential.get_token("https://management.azure.com/.default")
+            return credential
+        except ClientAuthenticationError as e:
+            print(f"{tc.BG_BRIGHT_RED}❌ Azure Authentication Failed{tc.RESET}")
+            print("\n🔧 To fix this issue, please run one of the following commands:")
+            print(f"{tc.CYAN}Option 1 - Azure CLI (Recommended):{tc.RESET}")
+            print("   az login")
+            print(f"{tc.CYAN}Option 2 - Azure Developer CLI:{tc.RESET}")
+            print("   azd auth login")
+            print(f"{tc.CYAN}Option 3 - Set environment variables:{tc.RESET}")
+            print("   AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID")
+            print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
+            raise e
 
     def load_instructions(self, instructions_file: str) -> str:
         """Load instructions from a file."""
