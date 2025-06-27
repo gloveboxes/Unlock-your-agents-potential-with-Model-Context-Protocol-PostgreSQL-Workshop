@@ -1,5 +1,4 @@
 """
-MCP Client integration for the docker model runner.
 Provides tools to communicate with MCP servers.
 """
 
