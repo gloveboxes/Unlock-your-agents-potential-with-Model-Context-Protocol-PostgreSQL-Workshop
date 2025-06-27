@@ -98,7 +98,7 @@ async def initialize() -> tuple[Agent | None, AgentThread | None]:
         return None, None
 
 
-async def cleanup(agent: Agent | None, thread: AgentThread | None, agents_client_instance=None) -> None:
+async def cleanup(agent: Agent | None, thread: AgentThread | None, agents_client_instance: AgentsClient | None = None) -> None:
     """Cleanup the Azure AI resources."""
     await cleanup_global_mcp_client()
     if agent and thread and agents_client_instance:
@@ -112,7 +112,7 @@ async def cleanup(agent: Agent | None, thread: AgentThread | None, agents_client
             print(f"⚠️  Warning: Error during Azure cleanup: {e}")
 
 
-async def post_message(thread_id: str, content: str, agent: Agent, thread: AgentThread, agents_client_instance) -> None:
+async def post_message(thread_id: str, content: str, agent: Agent, thread: AgentThread, agents_client_instance: AgentsClient) -> None:
     """Post a message to the Foundry Agent Service."""
     try:
         await agents_client_instance.messages.create(
