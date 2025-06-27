@@ -21,10 +21,8 @@
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 "ms-python.python",
-                "ms-toolsai.jupyter",
                 "ms-python.black-formatter",
                 "mathematic.vscode-pdf",
-                "ms-dotnettools.csdevkit",
                 "cweijan.vscode-postgresql-client2",
                 "charliermarsh.ruff"
             ]
