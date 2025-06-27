@@ -57,7 +57,7 @@ In this workshop, the MCP server acts as the bridge between the Azure AI Agent a
 1. **Receives Tool Calls**: The LLM generates tool calls based on your natural language queries
 2. **Executes Database Operations**: The MCP server safely executes SQL queries against the PostgreSQL database
 3. **Provides Schema Information**: Dynamically provides table schemas and relationships to help the LLM generate accurate queries
-4. **Enables Image Search**: Leverages PostgreSQL's pgvector extension for AI-powered product image similarity searches
+4. **Enables Image Search**: Leverages PostgreSQL's [pgvector](https://github.com/pgvector/pgvector){:target="_blank"} extension for AI-powered product image similarity searches
 5. **Returns Structured Data**: Sends formatted results back to the LLM for natural language responses
 6. **Provides Time Services**: Uses the MCP server to access time-related data, such as current date and time, which can be useful for generating time-sensitive reports or analyses.
 
