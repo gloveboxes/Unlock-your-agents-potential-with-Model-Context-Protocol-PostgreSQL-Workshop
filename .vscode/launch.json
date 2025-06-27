@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Sales Assistant",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/python/workshop/main.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {
+                "PYDEVD_DISABLE_FILE_VALIDATION": "1"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "Attach to Python",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5679
+            },
+            "justMyCode": false
+        }
+    ]
+}

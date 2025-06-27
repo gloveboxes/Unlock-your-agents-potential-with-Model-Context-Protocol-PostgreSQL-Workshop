@@ -1,0 +1,25 @@
+{
+    "servers": {
+        "my-mcp-server-zava-sales-windows": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+            "args": [
+                "${workspaceFolder}/zava_mcp_server.py"
+            ]
+        },
+        "my-mcp-server-zava-sales-linux-macos": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "${workspaceFolder}/zava_mcp_server.py"
+            ]
+        },
+        "my-mcp-server-zava-sales-postgres-linux-macos": {
+            "type": "stdio",
+            "command": "${workspaceFolder}/.venv/bin/python",
+            "args": [
+                "${workspaceFolder}/src/python/workshop/mcp_server.py"
+            ]
+        }
+    }
+}
