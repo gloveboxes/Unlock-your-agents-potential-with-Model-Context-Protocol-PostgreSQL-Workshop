@@ -32,6 +32,11 @@ class Utilities:
             print("   AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID")
             print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
             raise e
+        
+    @property
+    def get_credential(self) -> DefaultAzureCredential:
+        """Get the Azure credential."""
+        return DefaultAzureCredential()
 
     def load_instructions(self, instructions_file: str) -> str:
         """Load instructions from a file."""

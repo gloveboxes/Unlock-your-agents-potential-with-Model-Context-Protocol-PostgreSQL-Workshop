@@ -5,9 +5,7 @@ from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, AsyncToolSet, CodeInterpreterTool
 from azure.ai.projects.aio import AIProjectClient
 from azure.core.exceptions import ClientAuthenticationError
-from azure.identity.aio import DefaultAzureCredential
 from config import Config
-from dotenv import load_dotenv
 from mcp_client import (
     cleanup_global_mcp_client,
     fetch_and_build_mcp_tools,
@@ -56,8 +54,6 @@ async def add_agent_tools() -> None:
     # Add the code interpreter tool
     code_interpreter = CodeInterpreterTool()
     toolset.add(code_interpreter)
-
-    return
 
 
 async def initialize() -> tuple[Agent | None, AgentThread | None]:
@@ -134,7 +130,7 @@ async def post_message(thread_id: str, content: str, agent: Agent, thread: Agent
                     project_client
                     if project_client is not None
                     else AIProjectClient(
-                        credential=await utilities.validate_azure_authentication(),
+                        credential=utilities.get_credential(),
                         endpoint=Config.PROJECT_ENDPOINT,
                     )
                 ),
