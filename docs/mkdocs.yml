@@ -8,7 +8,7 @@ nav:
   # - Workshop Setup:
   #   - BUILD Attendees: introduction-event.md
   #   - Self-Guided Learners: introduction-self-guided.md
-  - Lab 1 Grounding LLMs with MCP Servers: lab-1-mcp_intro.md
+  - Lab 1 Grounding LLMs with MCP: lab-1-mcp_intro.md
   - Lab 2 Sales Analysis: lab-2-sales-assistant.md
   - Lab 3 Visual Product Search: lab-3-visual-search.md
   - Lab 4 Monitoring: lab-4-monitoring.md
