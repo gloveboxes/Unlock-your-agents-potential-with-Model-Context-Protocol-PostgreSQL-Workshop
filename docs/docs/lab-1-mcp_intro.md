@@ -1,6 +1,8 @@
-## 🚀 Usage
+## Introduction
 
-### Running the Sales Analysis Agentß
+Placeholder for Lab 1: Grounding LLMs with MCP Servers and PostgreSQL
+
+### Running the Sales Analysis Agent
 
 Once you have the development environment set up:
 
