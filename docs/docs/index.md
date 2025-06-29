@@ -2,7 +2,9 @@
 
 ## A 75-minute interactive workshop
 
-Imagine you are a sales manager at Zava, a retail DIY company with stores across Washington State and a growing online presence. You specialize in outdoor equipment, home improvement tools, and DIY supplies. You need to analyze sales data to find trends, understand customer preferences, and make informed business decisions. To help you, Zava has developed a conversational agent that can answer questions about your sales data and even help customers find products using image search.
+Imagine you are a sales manager at Zava, a retail DIY company with stores across Washington State and a growing online presence. You specialize in outdoor equipment, home improvement tools, and DIY supplies. 
+
+You need to analyze sales data to find trends, understand customer preferences, and make informed business decisions. To help you, Zava has developed a conversational agent that can answer questions about your sales data and even help customers find products using image search.
 
 ![Zava Sales Analysis Agent](media/persona.png)
 
