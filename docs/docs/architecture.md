@@ -36,19 +36,19 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 │                     │    └─────────────────┘    └─────────────────┘
 │ ┌─────────────────┐ │                                   │
 │ │ Azure AI        │ │                                   ▼
-│ │ Agents Service  │ │                          ┌─────────────────┐
-│ │ + Streaming     │ │                          │  PostgreSQL     │
-│ └─────────────────┘ │                          │  Database       │
-└─────────────────────┘                          │  + pgvector     │
-         │                                       └─────────────────┘
+│ │ Agents Service  │ │                           ┌─────────────────┐
+│ │ + Streaming     │ │                           │  PostgreSQL     │
+│ └─────────────────┘ │                           │  Database       │
+└─────────────────────┘                           │  + pgvector     │
+         │                                        └─────────────────┘
          ▼                                                │
 ┌─────────────────────┐                                   ▼
-│ Azure OpenAI        │                         ┌─────────────────┐
-│ Model Deployment    │                         │ 8 Normalized    │
-│ (GPT-4, etc.)       │                         │ Tables with     │
-└─────────────────────┘                         │ Performance     │
-                                                │ Indexes         │
-                                                └─────────────────┘
+│ Azure OpenAI        │                           ┌─────────────────┐
+│ Model Deployment    │                           │ 8 Normalized    │
+│ (GPT-4, etc.)       │                           │ Tables with     │
+└─────────────────────┘                           │ Performance     │
+                                                  │ Indexes         │
+                                                  └─────────────────┘
 ```
 
 ## Extending the Workshop Solution
