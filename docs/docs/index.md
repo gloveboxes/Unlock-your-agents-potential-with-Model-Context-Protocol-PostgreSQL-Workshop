@@ -24,7 +24,7 @@ Unlike traditional applications, where developers define the logic and workflows
 
 ## What is the Foundry Agent Service?
 
-The Foundry Agent Service offers a fully managed cloud service with SDKs for [Python](https://learn.microsoft.com/azure/ai-services/agents/quickstart?pivots=programming-language-python-azure){:target="_blank"}, [C#](https://learn.microsoft.com/azure/ai-services/agents/quickstart?pivots=programming-language-csharp){:target="_blank"}, and [TypeScript](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/quickstart?pivots=programming-language-typescript){:target="_blank"}. It simplifies AI agent development, reducing complex tasks like tool calling to just a few lines of code.
+The Foundry Agent Service offers a fully managed cloud service with SDKs for [Python](https://learn.microsoft.com/azure/ai-services/agents/quickstart?pivots=programming-language-python-azure){:target="_blank"}, [C#](https://learn.microsoft.com/azure/ai-services/agents/quickstart?pivots=programming-language-csharp){:target="_blank"}, and [TypeScript](https://learn.microsoft.com/en-us/azure/ai-foundry/agents/quickstart?pivots=programming-language-typescript){:target="_blank"}. The Foundry SDKs simplify AI agent development, reducing complex tasks like tool calling to just a few lines of code.
 
 !!! info
     MCP (Model Context Protocol) provides a standardized way to connect LLMs to external tools and systems. Unlike traditional function calling, MCP offers a more robust, secure, and scalable approach to tool integration, enabling sophisticated interactions between AI agents and data sources.
