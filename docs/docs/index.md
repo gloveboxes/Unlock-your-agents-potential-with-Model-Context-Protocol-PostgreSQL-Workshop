@@ -8,6 +8,18 @@ You need to analyze sales data to find trends, understand customer preferences, 
 
 ![Zava Sales Analysis Agent](media/persona.png)
 
+## What you will learn in the workshop
+
+Learn to build an AI agent that analyzes sales data, answers product questions, and helps customers find products using image search. Key topics:
+
+1. **Model Context Protocol (MCP)**: Universal access to data sources for LLMs.
+2. **LLMs with PostgreSQL via MCP**: Complex queries and image retrieval.
+3. **Azure AI Foundry**: Rapidly build and deploy AI agents with integrated tools and observability.
+
+### Just starting your AI Agents journey?
+
+If you're new to AI agents, start with the [Build your code-first agent with Azure AI Foundry](https://aka.ms/aitour/WRK552){:target="_blank"} workshop. You'll learn to build a code-first agent using Azure AI Foundry, integrating LLMs with databases, documents, and Bing search — a solid foundation for more advanced agents like the Zava Agent.
+
 ## What is an LLM-Powered AI Agent?
 
 A Large Language Model (LLM) powered AI Agent is semi-autonomous software designed to achieve a given goal without requiring predefined steps or processes. Instead of following explicitly programmed instructions, the agent determines how to accomplish a task using instructions and context.
