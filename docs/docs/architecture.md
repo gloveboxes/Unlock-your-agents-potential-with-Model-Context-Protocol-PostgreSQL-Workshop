@@ -18,7 +18,7 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 
 3. **Database**
 
-    The app is powered by the Zava Sales Database, a [PostgreSQL database](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. The database includes:
+    The app is powered by the Zava Sales Database, a [Azure Database for PostgreSQL flexible server](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. The database includes:
     
      - **50,000+ customer records** across Washington State and online
      - **300+ DIY products** including tools, outdoor equipment, and home improvement supplies  
@@ -28,29 +28,7 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
      The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
 
 ### Architecture
-
-```text
-┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
-│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
-│                     │    └─────────────────┘    └─────────────────┘
-│ ┌─────────────────┐ │                                   │
-│ │ Azure AI        │ │                                   ▼
-│ │ Agents Service  │ │                           ┌─────────────────┐
-│ │ + Streaming     │ │                           │ Azure Database  |
-│ │                 │ │                           │ for PostgreSQL  │
-│ └─────────────────┘ │                           │       +         │
-└─────────────────────┘                           │    pgvector     │
-         │                                        └─────────────────┘
-         ▼                                                │
-┌─────────────────────┐                                   ▼
-│ Azure OpenAI        │                           ┌─────────────────┐
-│ Model Deployment    │                           │ 8 Normalized    │
-│ (GPT-4, etc.)       │                           │ Tables with     │
-└─────────────────────┘                           │ Performance     │
-                                                  │ Indexes         │
-                                                  └─────────────────┘
-```
+pgvector
 
 ## Extending the Workshop Solution
 
