@@ -189,16 +189,6 @@ async def execute_sales_query(postgresql_query: str) -> str:
     - Use only valid table and column names from the schema
     - Never return all rows from any table without aggregation
 
-    DATABASE STRUCTURE:
-    - **orders**: Order headers (customer, store, date) - NO pricing information
-    - **order_items**: Line items with products, quantities, pricing - JOIN with orders for complete data
-    - **products**: Reference category_id and type_id, include unique SKU field - ALWAYS JOIN with categories/product_types for names
-    - **categories**: Master category lookup table
-    - **product_types**: Product type lookup linked to categories
-    - **customers**: Independent customer data (no store relationship)
-    - **stores**: Store reference data
-    - **inventory**: Stock levels per store/product
-
     MANDATORY JOIN PATTERNS FOR READABLE RESULTS:
     - Orders + Customer Names: orders o JOIN customers c ON o.customer_id = c.customer_id
     - Orders + Store Names: orders o JOIN stores s ON o.store_id = s.store_id

@@ -34,21 +34,21 @@ utilities = Utilities()
 agents_client = None
 project_client = None
 
-functions = None  # Will be populated dynamically with MCP tools
-
+mcp_tools = None  # Will be populated dynamically with MCP tools
 
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools.txt"
+# INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
 
 
 async def add_agent_tools() -> None:
     """Add tools for the agent."""
-    global functions
+    global mcp_tools
 
     # Fetch and build MCP tools dynamically
-    functions = await fetch_and_build_mcp_tools()
+    mcp_tools = await fetch_and_build_mcp_tools()
 
-    # Add the functions tool
-    toolset.add(functions)
+    # Add the MCP tools to the toolset
+    toolset.add(mcp_tools)
 
     # Add the code interpreter tool
     code_interpreter = CodeInterpreterTool()
@@ -124,7 +124,7 @@ async def post_message(thread_id: str, content: str, agent: Agent, thread: Agent
             thread_id=thread.id,
             agent_id=agent.id,
             event_handler=StreamEventHandler(
-                functions=functions if functions else AsyncFunctionTool(set()),
+                functions=mcp_tools if mcp_tools else AsyncFunctionTool(set()),
                 project_client=(
                     project_client
                     if project_client is not None
