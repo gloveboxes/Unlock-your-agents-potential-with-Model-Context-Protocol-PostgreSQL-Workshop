@@ -37,7 +37,7 @@ project_client = None
 mcp_tools = None  # Will be populated dynamically with MCP tools
 
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools.txt"
-# INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
+INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
 
 
 async def add_agent_tools() -> None:

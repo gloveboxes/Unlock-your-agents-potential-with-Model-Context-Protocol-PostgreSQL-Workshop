@@ -74,7 +74,7 @@ In this lab, you will use the HTTP API interface to connect the LLM with a Postg
 
 ### Review the Instructions
 
- 1. Open the **shared/instructions/function_calling.txt** file.
+ 1. Open the **shared/instructions/mcp_server_tools.txt** file.
 
     !!! tip "In VS Code, press Alt + Z (Windows/Linux) or Option + Z (Mac) to enable word wrap mode, making the instructions easier to read."
 
