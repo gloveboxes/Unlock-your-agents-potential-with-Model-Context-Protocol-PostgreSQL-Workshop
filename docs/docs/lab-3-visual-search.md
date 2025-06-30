@@ -1,6 +1,6 @@
 ## Introduction
 
-In this lab, you will explore Visual Search using [Azure Database for PostgreSQL](https://azure.microsoft.com/products/postgresql){:target="_blank"} with the [PGVECTOR extension](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-use-pgvector). Zava's PostgreSQL database includes a `products_embeddings` table, which stores image vectors for all products Zava sells. These vectors allow us to perform image similarity searches directly in the database, enabling customers to find products by providing an image rather than keywords.
+In this lab, you will explore Visual Search using [Azure Database for PostgreSQL](https://azure.microsoft.com/products/postgresql){:target="_blank"} with the [PGVECTOR extension](https://learn.microsoft.com/azure/postgresql/flexible-server/how-to-use-pgvector). Zava's PostgreSQL database includes a `products_embeddings` table, which stores image vectors for all products Zava sells. These vectors allow us to perform image similarity searches directly in the database, enabling customers to find products by providing an image rather than keywords.
 
 By leveraging PGVECTOR, you can efficiently compare image vectors and retrieve visually similar products. This capability is exposed to the AI agent through the MCP Server, allowing seamless integration of image-based product search into Zava's customer experience.
 
