@@ -47,3 +47,14 @@ By leveraging PGVECTOR, you can efficiently compare image vectors and retrieve v
 
 === "C#"
     TBD
+
+## Run the Agent App
+
+1. Press <kbd>F5</kbd> to run the app.
+2. In the terminal, the app will start, and the agent app will prompt you to  **Select an image**.
+
+### Start a Conversation with the Agent
+
+Try these questions:
+
+1. **Select an image**: Click the "Select an image" button in the terminal to choose an image file from your local machine. The agent will then perform a visual search using the selected image.
