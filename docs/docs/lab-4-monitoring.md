@@ -4,6 +4,8 @@ Monitoring is essential for ensuring the availability, performance, and reliabil
 
 ## Lab Exercise
 
+**THESE INSTRUCTIONS ARE NOT COMPLETE AND NEED TO BE FINISHED**
+
 1. Open the `monitoring.py` file.
 
 2. Review the code and identify the key metrics being collected for the Azure AI Foundry Agent Service.

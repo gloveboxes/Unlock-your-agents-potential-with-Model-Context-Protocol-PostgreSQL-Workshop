@@ -4,6 +4,8 @@ Tracing helps you understand and debug your agent's behavior by showing the sequ
 
 ## Lab Exercise
 
+**THESE INSTRUCTIONS ARE NOT COMPLETE AND NEED TO BE FINISHED**
+
 1. Open the Azure AI Foundry portal and navigate to the Agents playground.
 2. Start a new conversation with your agent and interact with it.
 3. Select **Thread info** in the active thread to view the trace, including steps, tool calls, and data exchanged.
