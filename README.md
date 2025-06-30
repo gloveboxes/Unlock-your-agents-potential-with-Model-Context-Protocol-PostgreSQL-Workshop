@@ -2,56 +2,56 @@
 
 The workshop documentation provides a step-by-step guide to building an AI agent using Azure AI Agents and the Model Context Protocol (MCP) with a PostgreSQL database and is published [here](https://gloveboxes.github.io/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop/).
 
-A comprehensive workshop demonstrating how to integrate Model Context Protocol (MCP) tools with Azure AI Agents to build powerful sales analysis capabilities. This project showcases a complete enterprise-grade sales intelligence system for Zava, a fictional DIY/outdoor gear retailer.
+A comprehensive workshop demonstrating how to integrate Model Context Protocol (MCP) tools with Azure AI Foundry Agents to build powerful sales analysis capabilities. This project showcases a complete enterprise-grade sales intelligence system for Zava, a fictional DIY/outdoor gear retailer.
 
 ## 📊 Workshop Scenario
 
-You are a sales manager at **Zava**, a multinational DIY and outdoor gear retailer. Your company has built a sophisticated conversational agent powered by Azure AI Agents to help analyze sales data, understand customer preferences, and make data-driven business decisions.
+You are a sales manager at **Zava**, a multinational DIY and outdoor gear retailer. Your company has built a sophisticated conversational agent powered by Azure Foundry AI Agents to help analyze sales data, understand customer preferences, and make data-driven business decisions.
 
-![banner](media/banner.png)
+![banner](docs/docs/media/persona.png)
 
-This workshop demonstrates how to build such an agent from scratch, combining the power of Azure AI Agents with a comprehensive PostgreSQL database through the Model Context Protocol.
+This workshop demonstrates how to build such an agent from scratch, combining the power of Azure Foundry AI Agents with a comprehensive PostgreSQL database through the Model Context Protocol.
 
 ## 🚀 Key Features
 
-- **Azure AI Agents**: Modern, cloud-native AI agent framework with streaming capabilities
+- **Azure AI Foundry Agents**: Modern, cloud-native AI agent framework with streaming capabilities
 - **MCP Integration**: Industry-standard Model Context Protocol for tool communication
-- **PostgreSQL Database**: Enterprise-grade database with pgvector extension for AI operations
+- **Azure Database for PostgreSQL**: Enterprise-grade database with pgvector extension for AI operations
 - **Comprehensive Data**: 50K+ customers, 300+ products, 200K+ orders with realistic business patterns
-- **Vector Search**: AI-powered product search capabilities with embeddings
+- **Vector Search**: AI-powered product search capabilities with PosgreSQL's pgvector extension
 - **Performance Optimized**: Indexed database with sub-second query performance
 - **Multi-language Support**: Localized responses in multiple languages
-- **Development Container**: Complete containerized development environment
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
 │   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
 │                     │    └─────────────────┘    └─────────────────┘
 │ ┌─────────────────┐ │                                   │
 │ │ Azure AI        │ │                                   ▼
-│ │ Agents Service  │ │                          ┌─────────────────┐
-│ │ + Streaming     │ │                          │  PostgreSQL     │
-│ └─────────────────┘ │                          │  Database       │
-└─────────────────────┘                          │  + pgvector     │
-         │                                       └─────────────────┘
+│ │ Agents Service  │ │                           ┌─────────────────┐
+│ │ + Streaming     │ │                           │ Azure Database  |
+│ │                 │ │                           │ for PostgreSQL  │
+│ └─────────────────┘ │                           │       +         │
+└─────────────────────┘                           │    pgvector     │
+         │                                        └─────────────────┘
          ▼                                                │
 ┌─────────────────────┐                                   ▼
-│ Azure OpenAI        │                         ┌─────────────────┐
-│ Model Deployment    │                         │ 8 Normalized    │
-│ (GPT-4, etc.)       │                         │ Tables with     │
-└─────────────────────┘                         │ Performance     │
-                                                │ Indexes         │
-                                                └─────────────────┘
+│ Azure OpenAI        │                           ┌─────────────────┐
+│ Model Deployment    │                           │ 8 Normalized    │
+│ (GPT-4, etc.)       │                           │ Tables with     │
+└─────────────────────┘                           │ Performance     │
+                                                  │ Indexes         │
+                                                  └─────────────────┘
 ```
 
 ## 📋 Prerequisites
 
 - **Azure Subscription** with access to Azure AI Foundry and Azure OpenAI
 - **Python 3.11+** (Python 3.13 recommended)
-- **Docker Desktop 4.42+** 
+- **Docker Desktop 4.42+**
 - **VS Code** with Dev Containers extension
 - **Git** for version control
 
@@ -60,11 +60,14 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 ### Option 1: Development Container (Recommended)
 
 **Prerequisites:**
+
 - Docker Desktop
 - VS Code with Dev Containers extension
 
 **Setup:**
+
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop.git
    cd "Unlock your agents potential with Model Context Protocol PostgreSQL Workshop"
@@ -73,6 +76,7 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 2. **Configure Environment**:
    - Copy `.env.example` to `.env`
    - Fill in your Azure AI Foundry project details:
+
      ```bash
      PROJECT_ENDPOINT=<your-azure-ai-foundry-endpoint>
      MODEL_DEPLOYMENT_NAME=<your-model-deployment-name>
@@ -93,6 +97,7 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 ### Option 2: Local Development
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/gloveboxes/Unlock-your-agents-potential-with-Model-Context-Protocol-PostgreSQL-Workshop.git
    cd "Unlock your agents potential with Model Context Protocol PostgreSQL Workshop"
@@ -115,11 +120,13 @@ This workshop demonstrates how to build such an agent from scratch, combining th
    ```
 
 1. **Install Dependencies**:
+
    ```bash
    pip install -r requirements-dev.txt
    ```
 
 2. **Setup PostgreSQL**:
+
    ```bash
    docker-compose up -d db
    ```
@@ -154,7 +161,7 @@ Once you have the development environment set up:
 2. **Interact with the Agent**:
    The agent supports rich streaming conversations with real-time responses:
 
-   ```
+   ```shell
    🤖 Zava Sales Analysis Agent Ready!
    Connected to Azure AI Foundry
    Available tools: PostgreSQL schema tools + sales query execution
@@ -316,23 +323,28 @@ The Zava retail database is a normalized PostgreSQL database with comprehensive 
 ### Core Tables
 
 **stores**: Store locations and identifiers
+
 - `store_id` (Primary Key)
 - `store_name` (Seattle, New York, London, etc.)
 
 **customers**: Customer information (50,000+ records)
+
 - `customer_id` (Primary Key)
 - `first_name`, `last_name`, `email`, `phone`
 
 **categories**: Product category master data
-- `category_id` (Primary Key) 
+
+- `category_id` (Primary Key)
 - `category_name` (Camping & Hiking, Apparel, etc.)
 
 **product_types**: Product subcategories
+
 - `type_id` (Primary Key)
 - `category_id` (Foreign Key)
 - `type_name` (Tents, Backpacks, Boots, etc.)
 
 **products**: Product catalog (300+ products)
+
 - `product_id` (Primary Key)
 - `sku`, `product_name`, `base_price`
 - `category_id`, `type_id` (Foreign Keys)
@@ -341,33 +353,40 @@ The Zava retail database is a normalized PostgreSQL database with comprehensive 
 ### Transaction Tables
 
 **orders**: Order headers (200,000+ records)
+
 - `order_id` (Primary Key)
 - `customer_id`, `store_id` (Foreign Keys)
 - `order_date`
 
 **order_items**: Line-item details with pricing
+
 - `order_item_id` (Primary Key)
 - `order_id`, `product_id` (Foreign Keys)
 - `quantity`, `unit_price`, `discount_percent`, `total_amount`
 
 **inventory**: Stock levels by store and product
+
 - `store_id`, `product_id` (Composite Primary Key)
 - `stock_level`
 
 ### Data Distribution
 
 **Geographic Coverage**: 7 global regions
+
 - North America, Europe, Asia-Pacific, China, Latin America, Middle East, Africa
 
 **Product Categories**: 8 main categories
+
 - Camping & Hiking, Apparel, Footwear, Water Gear, Winter Sports, Climbing, Fishing Gear, Travel
 
 **Time Range**: 2022-2024 with realistic seasonal patterns
+
 - Higher outdoor gear sales in spring/summer
 - Increased winter sports equipment in fall/winter
 - Holiday shopping spikes in Q4
 
 **Performance Features**:
+
 - 20+ optimized indexes for fast query performance
 - Realistic business patterns and data relationships
 - pgvector extension for AI-powered product search capabilities
@@ -375,31 +394,37 @@ The Zava retail database is a normalized PostgreSQL database with comprehensive 
 ## 🎯 Workshop Exercises
 
 ### Exercise 1: Basic Agent Setup
+
 - Configure Azure AI Foundry connection
 - Start the development container
 - Run your first agent conversation
 
 ### Exercise 2: Database Exploration
+
 - Understand the normalized database schema
 - Use schema tools to explore table structures
 - Execute basic queries through the agent
 
 ### Exercise 3: MCP Tool Development
+
 - Examine the MCP server implementation
 - Understand tool registration and execution
 - Extend the server with custom tools
 
 ### Exercise 4: Advanced Queries
+
 - Build complex multi-table joins
 - Implement aggregation and analytics queries
 - Handle error cases and edge conditions
 
 ### Exercise 5: Agent Customization
+
 - Modify agent instructions and behavior
 - Implement custom response formatting
 - Add multi-language support
 
 ### Exercise 6: Production Considerations
+
 - Implement proper error handling
 - Add monitoring and logging
 - Scale for enterprise deployment
@@ -409,22 +434,26 @@ The Zava retail database is a normalized PostgreSQL database with comprehensive 
 The workshop demonstrates enterprise-grade error handling:
 
 ### Database Layer
+
 - **Connection Resilience**: Automatic reconnection and connection pooling
 - **Query Validation**: SQL injection prevention and syntax validation
 - **Result Limiting**: Automatic LIMIT enforcement to prevent large result sets
 - **Transaction Management**: Proper commit/rollback handling
 
 ### MCP Layer
+
 - **Session Management**: Graceful session creation and cleanup
 - **Tool Discovery**: Dynamic tool loading with fallback behavior
 - **Error Propagation**: Clear error messages from MCP server to agent
 
 ### Agent Layer
+
 - **Streaming Errors**: Real-time error display during streaming responses
 - **Graceful Degradation**: Agent continues operating when tools are unavailable
 - **User Feedback**: Clear, actionable error messages for users
 
 ### Production Patterns
+
 - **Async Operations**: Non-blocking I/O throughout the stack
 - **Resource Management**: Proper cleanup of connections and sessions
 - **Logging**: Structured logging for debugging and monitoring
@@ -443,6 +472,7 @@ This workshop is designed for learning and experimentation:
 ### Workshop Extensions
 
 Consider these advanced exercises:
+
 - Add vector search capabilities using pgvector
 - Implement caching for frequently accessed data
 - Create additional MCP tools for other business functions
@@ -452,16 +482,19 @@ Consider these advanced exercises:
 ## � Additional Resources
 
 ### Azure AI Foundry
+
 - [Azure AI Foundry Documentation](https://docs.microsoft.com/azure/ai-services/)
 - [Azure OpenAI Service](https://docs.microsoft.com/azure/openai/)
 - [Azure AI Agents SDK](https://github.com/azure/azure-ai-agents)
 
 ### Model Context Protocol
+
 - [MCP Specification](https://modelcontextprotocol.io/)
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
 - [MCP Examples](https://github.com/modelcontextprotocol/examples)
 
 ### PostgreSQL & pgvector
+
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [pgvector Extension](https://github.com/pgvector/pgvector)
 - [PostgreSQL Performance Tuning](https://wiki.postgresql.org/wiki/Performance_Optimization)
@@ -475,6 +508,7 @@ This workshop is provided for educational purposes under the MIT License. The Za
 ### Common Issues
 
 **1. Azure Authentication Errors**
+
 ```bash
 # Ensure you're logged in to Azure CLI
 az login --use-device-code
@@ -482,6 +516,7 @@ az account set --subscription <your-subscription-id>
 ```
 
 **2. Database Connection Issues**
+
 ```bash
 # Check if PostgreSQL container is running
 docker-compose ps
@@ -492,11 +527,13 @@ docker-compose restart db
 ```
 
 **3. MCP Server Communication Errors**
+
 - Verify the MCP server starts correctly: `python mcp_server.py`
 - Check for Python environment issues: `pip install -r requirements-dev.txt`
 - Ensure all environment variables are set correctly
 
 **4. Agent Deployment Issues**
+
 - Verify your Azure AI Foundry project endpoint is correct
 - Check that your model deployment name matches the configuration
 - Ensure your Azure OpenAI deployment has sufficient quota
