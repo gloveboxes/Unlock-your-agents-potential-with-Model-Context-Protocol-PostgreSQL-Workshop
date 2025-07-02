@@ -38,12 +38,11 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 └─────────────────────┘                           │    pgvector     │
          │                                        └─────────────────┘
          ▼                                                │
-┌─────────────────────┐                                   ▼
-│ Azure OpenAI        │                           ┌─────────────────┐
-│ Model Deployment    │                           │ 8 Normalized    │
-│ (GPT-4, etc.)       │                           │ Tables with     │
-└─────────────────────┘                           │ Performance     │
-                                                  │ Indexes         │
+┌─────────────────────┐                           ┌─────────────────┐
+│ Azure OpenAI        │                           │ 8 Normalized    │
+│ Model Deployment    │                           │ Tables with     │
+│ (GPT-4, etc.)       │                           │ Performance     │
+└─────────────────────┘                           │ Indexes         │
                                                   └─────────────────┘
 ```
 
@@ -185,6 +184,32 @@ Once you have the development environment set up:
    - **Multi-language**: Ask questions in different languages for localized responses
    - **Data Export**: Request data in CSV format (presented as markdown tables)
    - **Complex Queries**: The agent can join multiple tables and perform sophisticated analysis
+
+## 🖥️ Interface Options
+
+This workshop now supports **two interface options**:
+
+### 🖥️ Command Line Interface (Original)
+Traditional terminal-based interaction for developers who prefer CLI tools.
+
+### 🌐 **Web Application Interface (New!)**
+Modern browser-based chat interface with real-time streaming and file upload capabilities.
+
+**Quick Start - Web Interface:**
+```bash
+cd src/python/workshop
+python main.py
+# Open browser to http://127.0.0.1:8005
+```
+
+**Features:**
+- 🎯 Modern web-based chat interface
+- 📎 File upload and processing
+- ⚡ Real-time streaming responses
+- 📱 Mobile-friendly design
+- 🔄 Session persistence
+
+For complete migration details, see: [Web App Migration Guide](docs/web-app-migration.md)
 
 ## 📁 Project Structure
 

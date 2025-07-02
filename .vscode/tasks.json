@@ -1,0 +1,14 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Agent Web Chat",
+			"type": "shell",
+			"command": "cd src/python/workshop && python main.py",
+			"group": "build",
+			"isBackground": true,
+			"problemMatcher": [],
+			"args": []
+		}
+	]
+}
