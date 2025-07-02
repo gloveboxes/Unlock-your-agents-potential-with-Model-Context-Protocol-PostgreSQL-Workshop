@@ -183,12 +183,31 @@ body {
 }
 
 .cursor {
-    animation: blink 1s infinite;
+    animation: blink 0.8s infinite;
+    color: #007bff;
+    font-weight: bold;
+    display: inline-block;
 }
 
 @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+    0%, 60% { opacity: 1; }
+    61%, 100% { opacity: 0.3; }
+}
+
+/* Smooth transition for progressive rendering */
+.assistant {
+    transition: none; /* Remove transition for faster rendering */
+}
+
+/* Ensure code blocks don't break during progressive rendering */
+.assistant pre {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Optimize rendering performance */
+.assistant * {
+    contain: layout style;
 }
 
 .file-info {

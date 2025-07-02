@@ -118,10 +118,88 @@ async function sendMessage() {
         }));
         
         let assistantMessage = '';
+        let renderTimeout = null;
+        let lastRenderLength = 0;
+        let lastRenderTime = 0;
+        
+        // Function to render markdown progressively
+        function renderProgressiveMarkdown() {
+            const now = Date.now();
+            
+            // Skip if we rendered very recently and content hasn't changed much
+            if (now - lastRenderTime < 10 && assistantMessage.length - lastRenderLength < 3) {
+                return;
+            }
+            
+            try {
+                // Parse the current markdown content
+                const renderedContent = marked.parse(assistantMessage);
+                assistantDiv.innerHTML = renderedContent + '<span class="cursor">▌</span>';
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                lastRenderLength = assistantMessage.length;
+                lastRenderTime = now;
+            } catch (e) {
+                // If markdown parsing fails (incomplete structure), try partial rendering
+                try {
+                    // Attempt to render what we can by adding temporary closing tags for incomplete structures
+                    let tempContent = assistantMessage;
+                    
+                    // Count unclosed code blocks and try to close them temporarily
+                    const codeBlockMatches = tempContent.match(/```/g);
+                    if (codeBlockMatches && codeBlockMatches.length % 2 === 1) {
+                        tempContent += '\n```';
+                    }
+                    
+                    // Count unclosed inline code and try to close them
+                    const inlineCodeMatches = tempContent.match(/(?<!\\)`/g);
+                    if (inlineCodeMatches && inlineCodeMatches.length % 2 === 1) {
+                        tempContent += '`';
+                    }
+                    
+                    const renderedContent = marked.parse(tempContent);
+                    assistantDiv.innerHTML = renderedContent + '<span class="cursor">▌</span>';
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    lastRenderLength = assistantMessage.length;
+                    lastRenderTime = now;
+                } catch (e2) {
+                    // If all else fails, show raw text with cursor
+                    assistantDiv.innerHTML = assistantMessage.replace(/\n/g, '<br>') + '<span class="cursor">▌</span>';
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    lastRenderLength = assistantMessage.length;
+                    lastRenderTime = now;
+                }
+            }
+        }
+        
+        // Optimized render scheduling
+        function scheduleRender() {
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+            }
+            
+            // Immediate render for significant content changes, word boundaries, or start of content
+            const contentDelta = assistantMessage.length - lastRenderLength;
+            const isWordBoundary = assistantMessage.endsWith(' ') || assistantMessage.endsWith('\n');
+            
+            if (contentDelta > 10 || assistantMessage.length < 20 || isWordBoundary) {
+                renderProgressiveMarkdown();
+                return;
+            }
+            
+            // Use requestAnimationFrame for smooth rendering
+            renderTimeout = setTimeout(() => {
+                requestAnimationFrame(renderProgressiveMarkdown);
+            }, 8);
+        }
         
         eventSource.onmessage = function(event) {
             if (event.data === '[DONE]') {
-                // Render final markdown
+                // Clear any pending render timeout
+                if (renderTimeout) {
+                    clearTimeout(renderTimeout);
+                    renderTimeout = null;
+                }
+                // Render final markdown without cursor
                 assistantDiv.innerHTML = marked.parse(assistantMessage);
                 eventSource.close();
                 // Re-enable input
@@ -137,15 +215,13 @@ async function sendMessage() {
                 if (parsed.content) {
                     // Handle regular text content (backward compatibility)
                     assistantMessage += parsed.content;
-                    // Show streaming with cursor, but don't parse markdown yet
-                    assistantDiv.innerHTML = assistantMessage + '<span class="cursor">▌</span>';
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    // Schedule progressive markdown rendering
+                    scheduleRender();
                 } else if (parsed.type === 'text' && parsed.content) {
                     // Handle new text format
                     assistantMessage += parsed.content;
-                    // Show streaming with cursor, but don't parse markdown yet
-                    assistantDiv.innerHTML = assistantMessage + '<span class="cursor">▌</span>';
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    // Schedule progressive markdown rendering
+                    scheduleRender();
                 } else if (parsed.file || (parsed.type === 'file' && parsed.file_info)) {
                     // Handle file (image) display
                     const fileInfo = parsed.file || parsed.file_info;
@@ -172,6 +248,11 @@ async function sendMessage() {
                         messagesDiv.scrollTop = messagesDiv.scrollHeight;
                     }
                 } else if (parsed.error) {
+                    // Clear any pending render timeout
+                    if (renderTimeout) {
+                        clearTimeout(renderTimeout);
+                        renderTimeout = null;
+                    }
                     assistantDiv.textContent = `Error: ${parsed.error}`;
                     assistantDiv.style.color = '#dc3545';
                     eventSource.close();
@@ -187,6 +268,11 @@ async function sendMessage() {
         
         eventSource.onerror = function(event) {
             console.error('EventSource failed:', event);
+            // Clear any pending render timeout
+            if (renderTimeout) {
+                clearTimeout(renderTimeout);
+                renderTimeout = null;
+            }
             assistantDiv.textContent = 'Connection error';
             assistantDiv.style.color = '#dc3545';
             eventSource.close();
