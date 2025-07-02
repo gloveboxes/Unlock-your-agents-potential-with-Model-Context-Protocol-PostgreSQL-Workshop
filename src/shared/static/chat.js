@@ -135,10 +135,42 @@ async function sendMessage() {
             try {
                 const parsed = JSON.parse(event.data);
                 if (parsed.content) {
+                    // Handle regular text content (backward compatibility)
                     assistantMessage += parsed.content;
                     // Show streaming with cursor, but don't parse markdown yet
                     assistantDiv.innerHTML = assistantMessage + '<span class="cursor">▌</span>';
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                } else if (parsed.type === 'text' && parsed.content) {
+                    // Handle new text format
+                    assistantMessage += parsed.content;
+                    // Show streaming with cursor, but don't parse markdown yet
+                    assistantDiv.innerHTML = assistantMessage + '<span class="cursor">▌</span>';
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                } else if (parsed.file || (parsed.type === 'file' && parsed.file_info)) {
+                    // Handle file (image) display
+                    const fileInfo = parsed.file || parsed.file_info;
+                    console.log('Received file info:', fileInfo); // Debug log
+                    if (fileInfo.is_image) {
+                        // Add image to the chat
+                        const imageDiv = document.createElement('div');
+                        imageDiv.className = 'image-container';
+                        imageDiv.innerHTML = `
+                            <img src="${fileInfo.relative_path}" 
+                                 alt="${fileInfo.attachment_name}" 
+                                 class="generated-image"
+                                 loading="lazy" 
+                                 onerror="console.error('Image failed to load:', '${fileInfo.relative_path}')" />
+                            <p class="image-caption">${fileInfo.attachment_name}</p>
+                        `;
+                        messagesDiv.appendChild(imageDiv);
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        console.log('Added image with src:', fileInfo.relative_path); // Debug log
+                    } else {
+                        // Handle non-image files
+                        assistantMessage += `\n\n📎 Generated file: [${fileInfo.file_name}](${fileInfo.relative_path})\n`;
+                        assistantDiv.innerHTML = assistantMessage + '<span class="cursor">▌</span>';
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    }
                 } else if (parsed.error) {
                     assistantDiv.textContent = `Error: ${parsed.error}`;
                     assistantDiv.style.color = '#dc3545';

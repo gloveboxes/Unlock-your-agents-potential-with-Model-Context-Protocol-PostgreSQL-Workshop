@@ -210,3 +210,39 @@ body {
 .uploading {
     opacity: 0.7;
 }
+
+/* Image display styles */
+.image-container {
+    margin: 10px 0;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.generated-image {
+    max-width: 100%;
+    max-height: 400px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: block;
+    margin: 0 auto;
+}
+
+.image-caption {
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+}
+
+/* File link styles */
+.assistant a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.assistant a:hover {
+    text-decoration: underline;
+}

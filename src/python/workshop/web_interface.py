@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import AsyncGenerator, Dict, List
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, MessageDeltaChunk
+from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, MessageDeltaChunk, ThreadMessage
 from azure.ai.projects.aio import AIProjectClient
 from config import Config
-from fastapi import FastAPI, Form, UploadFile
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from stream_event_handler import StreamEventHandler
 from utilities import Utilities
@@ -52,6 +52,7 @@ class WebInterface:
         self.app.get("/", response_class=HTMLResponse)(self.get_chat_page)
         self.app.post("/upload")(self.upload_file)
         self.app.get("/chat/stream")(self.stream_chat)
+        self.app.get("/files/{filename}")(self.serve_file)
     
     async def get_chat_page(self) -> HTMLResponse:
         """Serve the chat HTML page."""
@@ -154,10 +155,23 @@ class WebInterface:
                     if delta.text:
                         self.assistant_message += delta.text
                         # Put token in queue for web streaming instead of printing to terminal
-                        await self.token_queue.put(delta.text)
+                        await self.token_queue.put({"type": "text", "content": delta.text})
                     
                     # Don't call the parent method which would print to terminal
                     # super().on_message_delta(delta) - skip this to avoid terminal output
+                
+                async def on_thread_message(self, message: ThreadMessage) -> None:
+                    """Override to capture files and send them to web interface."""
+                    print(f"🔍 DEBUG: on_thread_message called")  # Debug
+                    # Call parent to download files
+                    await super().on_thread_message(message)
+                    
+                    print(f"🔍 DEBUG: generated_files length: {len(self.generated_files)}")  # Debug
+                    # Send file information to web interface
+                    if self.generated_files:
+                        for file_info in self.generated_files:
+                            print(f"🔍 DEBUG: Sending file info: {file_info}")  # Debug
+                            await self.token_queue.put({"type": "file", "file_info": file_info})
 
             # Create the event handler
             web_handler = WebStreamEventHandler(
@@ -185,6 +199,12 @@ class WebInterface:
                         instructions=self.agent.instructions,
                     ) as stream:
                         await stream.until_done()
+                except Exception as e:
+                    print(f"❌ Error in agent stream: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Send error to client
+                    await web_handler.token_queue.put({"type": "error", "error": str(e)})
                 finally:
                     # Signal end of stream
                     await web_handler.token_queue.put(None)
@@ -196,12 +216,23 @@ class WebInterface:
             while True:
                 try:
                     # Wait for next token with timeout
-                    token = await asyncio.wait_for(web_handler.token_queue.get(), timeout=60.0)
-                    if token is None:  # End of stream signal
+                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=60.0)
+                    if item is None:  # End of stream signal
                         break
                     
-                    # Send token to web client
-                    yield f"data: {json.dumps({'content': token})}\n\n"
+                    # Send item to web client based on type
+                    if isinstance(item, dict):
+                        if item.get("type") == "text":
+                            yield f"data: {json.dumps({'content': item['content']})}\n\n"
+                        elif item.get("type") == "file":
+                            print(f"🔍 DEBUG: Sending file to client: {item['file_info']}")  # Debug
+                            yield f"data: {json.dumps({'file': item['file_info']})}\n\n"
+                        elif item.get("type") == "error":
+                            print(f"❌ Sending error to client: {item['error']}")  # Debug
+                            yield f"data: {json.dumps({'error': item['error']})}\n\n"
+                    else:
+                        # Backwards compatibility for plain text
+                        yield f"data: {json.dumps({'content': item})}\n\n"
                     
                 except asyncio.TimeoutError:
                     yield f"data: {json.dumps({'error': 'Response timeout after 60 seconds'})}\n\n"
@@ -225,3 +256,19 @@ class WebInterface:
 
         except Exception as e:
             yield f"data: {json.dumps({'error': 'Streaming error: ' + str(e)})}\n\n"
+    
+    async def serve_file(self, filename: str) -> FileResponse:
+        """Serve files from the shared files directory."""
+        files_dir = Path(self.utilities.shared_files_path) / "files"
+        file_path = files_dir / filename
+        
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        # Security check: ensure the file is within the files directory
+        try:
+            file_path.resolve().relative_to(files_dir.resolve())
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail="Access denied") from e
+        
+        return FileResponse(path=str(file_path))

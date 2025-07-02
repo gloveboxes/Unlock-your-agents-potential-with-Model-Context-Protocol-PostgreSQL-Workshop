@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import (
@@ -23,6 +23,7 @@ class StreamEventHandler(AsyncAgentEventHandler[str]):
         self.project_client = project_client
         self.agents_client = agents_client
         self.util = utilities
+        self.generated_files: List[dict] = []  # Store generated file information
         super().__init__()
 
     async def on_message_delta(self, delta: MessageDeltaChunk) -> None:
@@ -31,12 +32,9 @@ class StreamEventHandler(AsyncAgentEventHandler[str]):
 
     async def on_thread_message(self, message: ThreadMessage) -> None:
         """Handle thread message events."""
-        pass
-        # if message.status == MessageStatus.COMPLETED:
-        #     print()
-        # self.util.log_msg_purple(f"ThreadMessage created. ID: {message.id}, " f"Status: {message.status}")
-
-        await self.util.get_files(message, self.agents_client)
+        # Get files and store their information
+        files = await self.util.get_files(message, self.agents_client)
+        self.generated_files.extend(files)
 
     async def on_thread_run(self, run: ThreadRun) -> None:
         """Handle thread run events"""
@@ -63,7 +61,7 @@ class StreamEventHandler(AsyncAgentEventHandler[str]):
         pass
         # self.util.log_msg_purple(f"\nStream completed.")
 
-    async def on_unhandled_event(self, event_type: str, event_data: Any) -> None:
+    async def on_unhandled_event(self, event_type: str, _event_data: object) -> None:
         """Handle unhandled events."""
         # print(f"Unhandled Event Type: {event_type}, Data: {event_data}")
         print(f"Unhandled Event Type: {event_type}")
