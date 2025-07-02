@@ -5,7 +5,7 @@
             "name": "Python: Sales Assistant",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/python/workshop/main.py",
+            "program": "${workspaceFolder}/src/python/workshop/app.py",
             "console": "integratedTerminal",
             "args": [],
             "env": {

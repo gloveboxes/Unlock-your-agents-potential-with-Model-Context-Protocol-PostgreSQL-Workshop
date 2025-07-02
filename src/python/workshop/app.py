@@ -366,7 +366,7 @@ async def stream_chat(message: str = "") -> StreamingResponse:
                     yield f"data: {json.dumps({'content': token})}\n\n"
                     
                     # Small delay to make streaming visible
-                    await asyncio.sleep(0.01)
+                    # await asyncio.sleep(0.01)
                     
                 except asyncio.TimeoutError:
                     yield f"data: {json.dumps({'error': 'Response timeout after 60 seconds'})}\n\n"
