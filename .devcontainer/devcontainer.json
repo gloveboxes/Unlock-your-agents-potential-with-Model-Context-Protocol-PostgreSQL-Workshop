@@ -23,7 +23,7 @@
                 "ms-python.python",
                 "ms-python.black-formatter",
                 "mathematic.vscode-pdf",
-                "cweijan.vscode-postgresql-client2",
+                "ms-ossdata.vscode-pgsql",
                 "charliermarsh.ruff"
             ]
         }
