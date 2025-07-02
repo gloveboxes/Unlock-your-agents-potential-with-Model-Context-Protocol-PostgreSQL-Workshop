@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Optional
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import ThreadMessage
+from azure.ai.agents.models import Agent, AgentThread, ThreadMessage
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity.aio import DefaultAzureCredential
 from terminal_colors import TerminalColors as tc
@@ -119,3 +120,29 @@ class Utilities:
 
         self.log_msg_purple("Vector store created and files added.")
         return vector_store
+
+    async def cleanup_agent_resources(self, agent: Optional[Agent], thread: Optional[AgentThread], agents_client_instance: Optional[AgentsClient]) -> None:
+        """Cleanup the Azure AI resources."""
+        from mcp_client import cleanup_global_mcp_client
+        
+        # Cleanup MCP client first
+        await cleanup_global_mcp_client()
+        
+        # Then cleanup Azure AI resources
+        if agent and thread and agents_client_instance:
+            try:
+                # Clean up files
+                existing_files = await agents_client_instance.files.list()
+                for f in existing_files.data:
+                    await agents_client_instance.files.delete(f.id)
+                
+                # Clean up thread
+                await agents_client_instance.threads.delete(thread.id)
+                
+                # Clean up agent
+                await agents_client_instance.delete_agent(agent.id)
+                
+                self.log_msg_green("✅ Agent resources cleaned up successfully")
+                
+            except Exception as e:
+                print(f"⚠️  Warning: Error during Azure cleanup: {e}")

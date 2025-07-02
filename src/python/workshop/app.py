@@ -72,7 +72,7 @@ async def lifespan(app_instance: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     if agent and thread and agents_client:
         try:
-            await cleanup(agent, thread, agents_client)
+            await utilities.cleanup_agent_resources(agent, thread, agents_client)
             print("Agent resources cleaned up.")
         except Exception as e:
             print(f"Warning: Error during cleanup: {e}")
@@ -159,19 +159,6 @@ async def initialize_agent() -> tuple[Agent | None, AgentThread | None]:
         logger.error("Please ensure you've enabled an instructions file.")
         return None, None
 
-
-async def cleanup(agent: Agent | None, thread: AgentThread | None, agents_client_instance: AgentsClient | None = None) -> None:
-    """Cleanup the Azure AI resources."""
-    await cleanup_global_mcp_client()
-    if agent and thread and agents_client_instance:
-        try:
-            existing_files = await agents_client_instance.files.list()
-            for f in existing_files.data:
-                await agents_client_instance.files.delete(f.id)
-            await agents_client_instance.threads.delete(thread.id)
-            await agents_client_instance.delete_agent(agent.id)
-        except Exception as e:
-            print(f"⚠️  Warning: Error during Azure cleanup: {e}")
 
 
 async def post_message(thread_id: str, content: str, agent: Agent, thread: AgentThread, agents_client_instance: AgentsClient) -> None:
