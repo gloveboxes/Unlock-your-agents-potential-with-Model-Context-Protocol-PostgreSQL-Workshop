@@ -80,8 +80,8 @@ In this lab, you will use the HTTP API interface to connect the LLM with a Postg
 
  2. Review how the instructions define the agent app’s behavior:
 
-     - **Role definition**: The agent assists Contoso users with sales data inquiries in a polite, professional, and friendly manner.
-     - **Context**: Contoso is an online retailer specializing in camping and sports gear.
+     - **Role definition**: The agent assists Zava users with sales data inquiries in a polite, professional, and friendly manner.
+     - **Context**: Zava is an online retailer specializing in camping and sports gear.
      - **Tool description – “Sales Data Assistance”**:
          - Enables the agent to generate and run SQL queries.
          - Includes database schema details for query building.

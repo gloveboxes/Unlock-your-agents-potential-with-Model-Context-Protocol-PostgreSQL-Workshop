@@ -1,4 +1,4 @@
-# Contoso Sales Assistant
+# Zava Sales Assistant
 
 The instructions for this workshop are published to GitHub Pages at
 [aka.ms/aitour/wrk552](https://aka.ms/aitour/wrk552). This folder `docs` contains the source code for those instructions.

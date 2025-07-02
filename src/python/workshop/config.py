@@ -11,10 +11,10 @@ class Config:
     """Configuration class for managing application settings."""
     
     # Agent configuration
-    AGENT_NAME = "Contoso Sales Agent"
+    AGENT_NAME = "Zava DIY Sales Agent"
     
     # File paths
-    TENTS_DATA_SHEET_FILE = "datasheet/contoso-tents-datasheet.pdf"
+    TENTS_DATA_SHEET_FILE = "datasheet/zava-tents-datasheet.pdf"
     FONTS_ZIP = "fonts/fonts.zip"
     
     # Azure configuration - loaded from environment variables

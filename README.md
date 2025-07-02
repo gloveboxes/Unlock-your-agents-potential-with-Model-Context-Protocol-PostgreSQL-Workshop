@@ -326,7 +326,7 @@ The agent behavior is configured in `config.py`:
 
 ```python
 class Config:
-    AGENT_NAME = "Contoso Sales Agent"
+    AGENT_NAME = "Zava Sales Agent"
     MAX_COMPLETION_TOKENS = 10240
     MAX_PROMPT_TOKENS = 20480
     TEMPERATURE = 0.1  # Low for deterministic SQL generation

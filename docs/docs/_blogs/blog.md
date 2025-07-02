@@ -1,6 +1,6 @@
 # Build Your First Agent with the Azure AI Foundry Agent Service: Self-Guided Workshop
 
-![Contoso Sales Analysis Agent](../media/persona.png)
+![Zava Sales Analysis Agent](../media/persona.png)
 
 Agentic AI is changing how we build intelligent apps—enabling software to reason, plan, and act for us. Learning to build AI agents is quickly becoming a must-have skill for anyone working with AI.
 

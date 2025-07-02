@@ -95,7 +95,7 @@ Try these questions:
         The agent inferred from the conversation which file you wanted to create, even though you
         didn't explicitly specify it.
 
-3. Continue asking questions about Contoso sales data to see the Code Interpreter in action. Few examples:
+3. Continue asking questions about Zava sales data to see the Code Interpreter in action. Few examples:
     - **What would be the impact of a shock event (e.g., 20% sales drop in one region) on global sales distribution? Show as a Grouped Bar Chart.**
         - Follow up with **What if the shock event was 50%?**
     - **Which regions have sales above or below the average? Show as a Bar Chart with Deviation from Average.**
