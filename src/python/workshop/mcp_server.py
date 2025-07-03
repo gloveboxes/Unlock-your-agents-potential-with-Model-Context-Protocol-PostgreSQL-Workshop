@@ -37,7 +37,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 
 # Create MCP server with lifespan support
-mcp = FastMCP("customer-sales-tools", lifespan=app_lifespan)
+mcp = FastMCP("mcp-zava-sales-devcontainer", lifespan=app_lifespan)
 
 
 def get_db_provider() -> PostgreSQLSchemaProvider:

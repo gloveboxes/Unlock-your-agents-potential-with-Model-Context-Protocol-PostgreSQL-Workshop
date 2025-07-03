@@ -1,0 +1,9 @@
+{
+    "chat.mcp.serverSampling": {
+        "workspace/.vscode/mcp.json: mcp-zava-sales-devcontainer": {
+            "allowedModels": [
+                "github.copilot-chat/gpt-4.1"
+            ]
+        }
+    }
+}
