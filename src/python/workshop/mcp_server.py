@@ -49,18 +49,24 @@ def get_db_provider() -> PostgreSQLSchemaProvider:
     raise RuntimeError("Invalid lifespan context type")
 
 
+async def get_table_schema(table_name: str) -> str:
+    """Returns the complete schema information for a table."""
+
+    try:
+        provider = get_db_provider()
+        schema_info = await provider.get_table_metadata_string(table_name)
+        return f"{table_name} Table Schema:\n\n{schema_info}"
+    except Exception as e:
+        return f"Error retrieving {table_name} table schema: {e!s}"
+
+
 @mcp.tool()
 async def get_customers_table_schema() -> str:
     """Get the complete schema information for the customers table. **ALWAYS call this tool first** when queries involve customer data, customer information, or customer-related analysis. This provides table structure and column types.
 
     Note: Customers are independent entities with no direct store relationship - store information is tracked per order in the orders table. **CRITICAL**: ALWAYS include customer first_name and last_name in results - never return just customer_id as it is not human-readable.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("customers")
-        return f"Customers Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving customers table schema: {e!s}"
+    return await get_table_schema("customers")
 
 
 @mcp.tool()
@@ -69,12 +75,7 @@ async def get_products_table_schema() -> str:
 
     Note: Products contain a unique SKU field for business identification and reference category_id and type_id instead of storing text directly. **CRITICAL**: ALWAYS join with categories and product_types tables to return category_name and type_name - never return just IDs as they are not human-readable.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("products")
-        return f"Products Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving products table schema: {e!s}"
+    return await get_table_schema("products")
 
 
 @mcp.tool()
@@ -83,12 +84,7 @@ async def get_orders_table_schema() -> str:
 
     Note: This table contains order headers (order_id, customer_id, store_id, order_date). **CRITICAL**: ALWAYS join with customers table for customer names and stores table for store names - never return just customer_id or store_id as they are not human-readable. For product details and pricing, join with order_items table.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("orders")
-        return f"Orders Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving orders table schema: {e!s}"
+    return await get_table_schema("orders")
 
 
 @mcp.tool()
@@ -97,12 +93,7 @@ async def get_inventory_table_schema() -> str:
 
     Note: Inventory is tracked per store_id and product_id combination, allowing different stock levels at each store location. **CRITICAL**: ALWAYS join with stores table for store_name and products table (then categories/product_types) for product_name, category_name, type_name - never return just store_id or product_id as they are not human-readable.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("inventory")
-        return f"Inventory Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving inventory table schema: {e!s}"
+    return await get_table_schema("inventory")
 
 
 @mcp.tool()
@@ -111,12 +102,7 @@ async def get_stores_table_schema() -> str:
 
     Note: This table contains only core store information (store_id, store_name). Store performance data comes from joining with orders table.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("stores")
-        return f"Stores Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving stores table schema: {e!s}"
+    return await get_table_schema("stores")
 
 
 @mcp.tool()
@@ -125,12 +111,7 @@ async def get_categories_table_schema() -> str:
 
     Note: This is a lookup table containing category_id and category_name. Products reference this table via category_id.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("categories")
-        return f"Categories Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving categories table schema: {e!s}"
+    return await get_table_schema("categories")
 
 
 @mcp.tool()
@@ -138,12 +119,7 @@ async def get_product_types_table_schema() -> str:
     """Get the complete schema information for the product_types table. **ALWAYS call this tool first** when queries involve product types, subcategories, or product type analysis. This provides the product type lookup table linked to categories.
 
     Note: This table contains type_id, category_id, and type_name. It links product types to their parent categories."""
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("product_types")
-        return f"Product Types Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving product_types table schema: {e!s}"
+    return await get_table_schema("product_types")
 
 
 @mcp.tool()
@@ -152,12 +128,7 @@ async def get_order_items_table_schema() -> str:
 
     Note: This table contains the actual sales transactions with product_id, quantities, pricing, and totals. Each row represents one product within an order. **CRITICAL**: ALWAYS join with products table and then with categories/product_types tables to return product_name, category_name, and type_name - never return just product_id as it is not human-readable.
     """
-    try:
-        provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string("order_items")
-        return f"Order Items Table Schema:\n\n{schema_info}"
-    except Exception as e:
-        return f"Error retrieving order_items table schema: {e!s}"
+    return await get_table_schema("order_items")
 
 
 @mcp.tool()
