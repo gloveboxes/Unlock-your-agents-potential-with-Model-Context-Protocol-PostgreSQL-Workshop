@@ -362,7 +362,7 @@ class PostgreSQLSchemaProvider:
         return self.format_schema_metadata_for_ai(schema)
 
     async def execute_query(self, sql_query: str) -> str:
-        """Execute a SQL query and return results as JSON."""
+        """Execute a SQL query and return results in LLM-friendly JSON format."""
         if not self.connection:
             return json.dumps({"error": "Database connection not established"})
 
@@ -372,21 +372,32 @@ class PostgreSQLSchemaProvider:
             rows = await self.connection.fetch(sql_query)
             
             if not rows:
-                return json.dumps(
-                    "The query returned no results. Try a different question."
-                )
+                return json.dumps({
+                    "results": [],
+                    "row_count": 0,
+                    "columns": [],
+                    "message": "The query returned no results. Try a different question."
+                })
 
-            # Convert asyncpg Records to dict format for pandas
+            # Convert asyncpg Records to list of dictionaries (much simpler!)
+            results = [dict(row) for row in rows]
             columns = list(rows[0].keys()) if rows else []
-            data_rows = [list(row.values()) for row in rows]
             
-            data = pd.DataFrame(data_rows, columns=columns)
-            return data.to_json(index=False, orient="split")
+            # Return LLM-friendly format
+            return json.dumps({
+                "results": results,
+                "row_count": len(results),
+                "columns": columns
+            }, indent=2, default=str)
 
         except Exception as e:
-            return json.dumps(
-                {"PostgreSQL query failed with error": str(e), "query": sql_query}
-            )
+            return json.dumps({
+                "error": f"PostgreSQL query failed: {e!s}",
+                "query": sql_query,
+                "results": [],
+                "row_count": 0,
+                "columns": []
+            })
 
 
 async def test_connection() -> bool:
@@ -400,7 +411,7 @@ async def test_connection() -> bool:
         return False
 
 
-async def main():
+async def main() -> None:
     """Main function to run the schema tool."""
     logger.info("🤖 AI-Friendly PostgreSQL Database Schema Tool")
     logger.info("=" * 50)
