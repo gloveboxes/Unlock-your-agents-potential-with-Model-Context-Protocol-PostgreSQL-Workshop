@@ -99,7 +99,7 @@ class MCPClient:
         try:
             await self._ensure_session()
             assert self._session is not None, "Session should be established after _ensure_session"
-
+            print(f"Calling tool: {tool_name} with arguments: {arguments}")
             result = await self._session.call_tool(tool_name, arguments)
             return self._extract_content(result)
 
