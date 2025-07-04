@@ -162,11 +162,11 @@ class WebInterface:
                 
                 async def on_thread_message(self, message: ThreadMessage) -> None:
                     """Override to capture files and send them to web interface."""
-                    print(f"🔍 DEBUG: on_thread_message called")  # Debug
+                    # print(f"🔍 DEBUG: on_thread_message called")  # Debug
                     # Call parent to download files
                     await super().on_thread_message(message)
                     
-                    print(f"🔍 DEBUG: generated_files length: {len(self.generated_files)}")  # Debug
+                    # print(f"🔍 DEBUG: generated_files length: {len(self.generated_files)}")  # Debug
                     # Send file information to web interface
                     if self.generated_files:
                         for file_info in self.generated_files:

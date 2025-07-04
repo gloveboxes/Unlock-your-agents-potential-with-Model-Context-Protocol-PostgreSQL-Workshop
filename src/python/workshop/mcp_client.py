@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from azure.ai.agents.models import AsyncFunctionTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from terminal_colors import TerminalColors as tc
 
 
 class MCPClient:
@@ -99,7 +100,7 @@ class MCPClient:
         try:
             await self._ensure_session()
             assert self._session is not None, "Session should be established after _ensure_session"
-            print(f"Calling tool: {tool_name} with arguments: {arguments}")
+            print(f"{tc.BRIGHT_BLUE}Calling tool: {tool_name} with arguments: {arguments}{tc.RESET}")
             result = await self._session.call_tool(tool_name, arguments)
             return self._extract_content(result)
 
