@@ -9,17 +9,21 @@ Web interface available at: http://127.0.0.1:8005
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Tuple
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, AsyncToolSet, CodeInterpreterTool
+from azure.ai.agents.telemetry import trace_function
 from azure.ai.projects.aio import AIProjectClient
+from azure.monitor.opentelemetry import configure_azure_monitor
 from config import Config
 
 # from agent_manager import AgentManager
 from fastapi import FastAPI
 from mcp_client import fetch_and_build_mcp_tools
+from opentelemetry import trace
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 from web_interface import WebInterface
@@ -33,12 +37,15 @@ for logger_name in [
     "azure.ai.projects",
     "azure.core",
     "azure.identity",
-    "uvicorn.access"  # Suppress uvicorn access logs
+    "uvicorn.access",  # Suppress uvicorn access logs
 ]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
 # Configuration
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
+
+trace_scenario = "Zava Agent Initialization"
+tracer = trace.get_tracer("zava_agent.tracing")
 
 
 class AgentManager:
@@ -69,10 +76,12 @@ class AgentManager:
             # Validate configuration
             Config.validate_required_env_vars()
 
-            # Authenticate
-            print("🔐 Validating Azure authentication...")
+            # Load instructions
+            instructions = self.utilities.load_instructions(instructions_file)
+
+            # Validate Azure Entra ID Authentication
             credential = await self.utilities.validate_azure_authentication()
-            print("✅ Azure authentication successful!")
+            print("✅ Azure Entra ID authentication successful!")
 
             # Create clients
             self.agents_client = AgentsClient(
@@ -88,28 +97,30 @@ class AgentManager:
             # Setup tools
             await self._setup_tools()
 
-            # Load instructions
-            instructions = self.utilities.load_instructions(instructions_file)
+            # Enable Azure Monitor Telemetry
+            configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
 
-            # Create agent
-            print("Creating agent...")
-            self.agent = await self.agents_client.create_agent(
-                model=Config.API_DEPLOYMENT_NAME,
-                name=Config.AGENT_NAME,
-                instructions=instructions,
-                toolset=self.toolset,
-                temperature=Config.TEMPERATURE,
-            )
-            print(f"Created agent, ID: {self.agent.id}")
+            with tracer.start_as_current_span(trace_scenario):
+                # Create agent
+                print("Creating agent...")
+                self.agent = await self.agents_client.create_agent(
+                    model=Config.API_DEPLOYMENT_NAME,
+                    name=Config.AGENT_NAME,
+                    instructions=instructions,
+                    toolset=self.toolset,
+                    temperature=Config.TEMPERATURE,
+                )
+                print(f"Created agent, ID: {self.agent.id}")
 
-            # Enable auto function calls
-            self.agents_client.enable_auto_function_calls(tools=self.toolset)
-            print("Enabled auto function calls.")
+                # Enable auto function calls
+                self.agents_client.enable_auto_function_calls(
+                    tools=self.toolset)
+                print("Enabled auto function calls.")
 
-            # Create thread
-            print("Creating thread...")
-            self.thread = await self.agents_client.threads.create()
-            print(f"Created thread, ID: {self.thread.id}")
+                # Create thread
+                print("Creating thread...")
+                self.thread = await self.agents_client.threads.create()
+                print(f"Created thread, ID: {self.thread.id}")
 
             return True
 
@@ -121,9 +132,7 @@ class AgentManager:
         """Clean up agent resources."""
         if self.agent and self.thread and self.agents_client:
             try:
-                await self.utilities.cleanup_agent_resources(
-                    self.agent, self.thread, self.agents_client
-                )
+                await self.utilities.cleanup_agent_resources(self.agent, self.thread, self.agents_client)
                 print("Agent resources cleaned up.")
             except Exception as e:
                 print(f"Warning: Error during cleanup: {e}")
@@ -176,7 +185,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="Azure AI Agent Chat", lifespan=lifespan)
 
 # Initialize web interface
-web_interface = WebInterface(app, utilities)
+web_interface = WebInterface(app, utilities, tracer)
 
 
 async def main() -> None:

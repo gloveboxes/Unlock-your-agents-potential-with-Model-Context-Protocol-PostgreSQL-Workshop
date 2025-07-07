@@ -10,6 +10,7 @@ from config import Config
 from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from opentelemetry import trace
 from stream_event_handler import StreamEventHandler
 from utilities import Utilities
 
@@ -17,11 +18,12 @@ from utilities import Utilities
 class WebInterface:
     """Handles all web interface functionality for the AI Agent Chat application."""
     
-    def __init__(self, app: FastAPI, utilities: Utilities) -> None:
+    def __init__(self, app: FastAPI, utilities: Utilities, tracer: trace) -> None:
         """Initialize the web interface with FastAPI app and utilities."""
         self.app = app
         self.utilities = utilities
         self.chat_sessions: Dict[str, List[Dict]] = {}
+        self.tracer = tracer
         
         # These will be injected by the main app
         self.agents_client: AgentsClient | None = None
@@ -178,39 +180,58 @@ class WebInterface:
                 self.utilities, self.mcp_tools, self.project_client, self.agents_client
             )
 
-            # Post message to the agent thread
-            await self.agents_client.messages.create(
-                thread_id=self.thread.id,
-                role="user",
-                content=message,
-            )
-
-            # Start the agent stream in a background task
-            async def run_agent() -> None:
-                try:
-                    async with await self.agents_client.runs.stream(
+            # Create a span for this chat request with more descriptive naming
+            # Truncate message for span name to keep it readable
+            message_preview = message[:50] + "..." if len(message) > 50 else message
+            span_name = f"Zava Agent Chat Request: {message_preview}"
+            
+            with self.tracer.start_as_current_span(span_name) as span:
+                # Add some attributes to the span for better observability
+                span.set_attribute("user_message_length", len(message))
+                span.set_attribute("session_id", session_id)
+                span.set_attribute("user_message", message)  # Full message in attributes
+                span.set_attribute("operation_type", "chat_request")
+                span.set_attribute("agent_id", self.agent.id)
+                span.set_attribute("thread_id", self.thread.id)
+                
+                # Create message in thread
+                with self.tracer.start_as_current_span("create_user_message") as message_span:
+                    await self.agents_client.messages.create(
                         thread_id=self.thread.id,
-                        agent_id=self.agent.id,
-                        event_handler=web_handler,
-                        max_completion_tokens=Config.MAX_COMPLETION_TOKENS,
-                        max_prompt_tokens=Config.MAX_PROMPT_TOKENS,
-                        temperature=Config.TEMPERATURE,
-                        top_p=Config.TOP_P,
-                        instructions=self.agent.instructions,
-                    ) as stream:
-                        await stream.until_done()
-                except Exception as e:
-                    print(f"❌ Error in agent stream: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    # Send error to client
-                    await web_handler.token_queue.put({"type": "error", "error": str(e)})
-                finally:
-                    # Signal end of stream
-                    await web_handler.token_queue.put(None)
+                        role="user",
+                        content=message,
+                    )
+                    message_span.set_attribute("thread_id", self.thread.id)
 
-            # Start the agent processing
-            agent_task = asyncio.create_task(run_agent())
+                # Start the agent stream
+                with self.tracer.start_as_current_span("agent_stream_processing") as stream_span:
+                    try:
+                        async with await self.agents_client.runs.stream(
+                            thread_id=self.thread.id,
+                            agent_id=self.agent.id,
+                            event_handler=web_handler,
+                            max_completion_tokens=Config.MAX_COMPLETION_TOKENS,
+                            max_prompt_tokens=Config.MAX_PROMPT_TOKENS,
+                            temperature=Config.TEMPERATURE,
+                            top_p=Config.TOP_P,
+                            instructions=self.agent.instructions,
+                        ) as stream:
+                            await stream.until_done()
+                        stream_span.set_attribute("agent_id", self.agent.id)
+                        stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
+                    except Exception as e:
+                        print(f"❌ Error in agent stream: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        # Send error to client
+                        await web_handler.token_queue.put({"type": "error", "error": str(e)})
+                        span.set_attribute("error", True)
+                        span.set_attribute("error_message", str(e))
+                        stream_span.set_attribute("error", True)
+                        stream_span.set_attribute("error_message", str(e))
+                    finally:
+                        # Signal end of stream
+                        await web_handler.token_queue.put(None)
 
             # Stream tokens as they arrive
             while True:
@@ -237,12 +258,6 @@ class WebInterface:
                 except asyncio.TimeoutError:
                     yield f"data: {json.dumps({'error': 'Response timeout after 60 seconds'})}\n\n"
                     break
-
-            # Wait for agent task to complete
-            try:
-                await asyncio.wait_for(agent_task, timeout=5.0)
-            except asyncio.TimeoutError:
-                agent_task.cancel()
 
             # Add complete message to session
             if web_handler.assistant_message:
