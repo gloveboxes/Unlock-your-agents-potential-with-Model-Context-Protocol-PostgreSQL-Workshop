@@ -9,13 +9,11 @@ Web interface available at: http://127.0.0.1:8005
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Tuple
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, AsyncToolSet, CodeInterpreterTool
-from azure.ai.agents.telemetry import trace_function
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
 from config import Config
@@ -28,7 +26,9 @@ from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 from web_interface import WebInterface
 
+# Initialize logging
 logger = logging.getLogger(__name__)
+
 # Configure logging - suppress verbose Azure SDK logs
 logging.basicConfig(level=logging.ERROR)
 for logger_name in [
@@ -41,8 +41,10 @@ for logger_name in [
 ]:
     logging.getLogger(logger_name).setLevel(logging.WARNING)
 
-# Configuration
+# Agent Instructions
+INSTRUCTIONS_FILE = "instructions/mcp_server_tools.txt"
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
+TELEMETRY_ENABLED = False
 
 trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
@@ -98,7 +100,8 @@ class AgentManager:
             await self._setup_tools()
 
             # Enable Azure Monitor Telemetry
-            configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
+            if TELEMETRY_ENABLED:
+                configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
 
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent

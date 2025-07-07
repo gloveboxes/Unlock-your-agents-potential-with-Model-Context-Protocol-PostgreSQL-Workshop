@@ -205,8 +205,7 @@ class WebInterface:
             while True:
                 try:
                     # Wait for next token with timeout
-                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=10.0)
-                    print(f"🔍 DEBUG: Received item from queue: {item}")  # Debug
+                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=20.0)
                     if item is None:  # End of stream signal
                         break
                     
@@ -225,7 +224,7 @@ class WebInterface:
                         yield f"data: {json.dumps({'content': item})}\n\n"
                     
                 except asyncio.TimeoutError:
-                    yield f"data: {json.dumps({'error': 'Response timeout after 60 seconds'})}\n\n"
+                    yield f"data: {json.dumps({'error': 'Response timeout after 20 seconds'})}\n\n"
                     break
 
             # Add complete message to session
