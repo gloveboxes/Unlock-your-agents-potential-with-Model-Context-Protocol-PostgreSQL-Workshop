@@ -39,7 +39,7 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
         # Send file information to web interface
         if files:
             for file_info in files:
-                print(f"🔍 DEBUG: Sending file info: {file_info}")  # Debug
+                # print(f"🔍 DEBUG: Sending file info: {file_info}")  # Debug
                 await self.token_queue.put({"type": "file", "file_info": file_info})
 
     async def on_thread_run(self, run: ThreadRun) -> None:
