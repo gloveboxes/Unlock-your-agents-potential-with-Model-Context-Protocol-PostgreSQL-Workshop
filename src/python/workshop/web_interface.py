@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List
@@ -136,7 +137,9 @@ class WebInterface:
             headers={
                 "Cache-Control": "no-cache", 
                 "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"  # Disable nginx buffering
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+                "Access-Control-Allow-Origin": "*",  # Allow CORS if needed
+                "Content-Encoding": "identity"  # Disable compression for streaming
             },
         )
     
@@ -173,59 +176,76 @@ class WebInterface:
 
                 # Start the agent stream
                 with self.tracer.start_as_current_span("agent_stream_processing") as stream_span:
-                    try:
-                        async with await self.agents_client.runs.stream(
-                            thread_id=self.thread.id,
-                            agent_id=self.agent.id,
-                            event_handler=web_handler,
-                            max_completion_tokens=Config.MAX_COMPLETION_TOKENS,
-                            max_prompt_tokens=Config.MAX_PROMPT_TOKENS,
-                            temperature=Config.TEMPERATURE,
-                            top_p=Config.TOP_P,
-                            instructions=self.agent.instructions,
-                        ) as stream:
-                            await stream.until_done()
-                        stream_span.set_attribute("agent_id", self.agent.id)
-                        stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
-                    except Exception as e:
-                        print(f"❌ Error in agent stream: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        # Send error to client
-                        await web_handler.token_queue.put({"type": "error", "error": str(e)})
-                        span.set_attribute("error", True)
-                        span.set_attribute("error_message", str(e))
-                        stream_span.set_attribute("error", True)
-                        stream_span.set_attribute("error_message", str(e))
-                    finally:
-                        # Signal end of stream
-                        await web_handler.token_queue.put(None)
+                    # Start the stream in a background task
+                    async def run_stream() -> None:
+                        try:
+                            async with await self.agents_client.runs.stream(
+                                thread_id=self.thread.id,
+                                agent_id=self.agent.id,
+                                event_handler=web_handler,
+                                max_completion_tokens=Config.MAX_COMPLETION_TOKENS,
+                                max_prompt_tokens=Config.MAX_PROMPT_TOKENS,
+                                temperature=Config.TEMPERATURE,
+                                top_p=Config.TOP_P,
+                                instructions=self.agent.instructions,
+                            ) as stream:
+                                await stream.until_done()
+                            stream_span.set_attribute("agent_id", self.agent.id)
+                            stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
+                        except Exception as e:
+                            print(f"❌ Error in agent stream: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            # Send error to client
+                            await web_handler.token_queue.put({"type": "error", "error": str(e)})
+                            span.set_attribute("error", True)
+                            span.set_attribute("error_message", str(e))
+                            stream_span.set_attribute("error", True)
+                            stream_span.set_attribute("error_message", str(e))
+                        finally:
+                            # Signal end of stream
+                            await web_handler.token_queue.put(None)
+                    
+                    # Start the stream task without awaiting it - keep reference to prevent GC
+                    stream_task = asyncio.create_task(run_stream())
+                    # We don't await the task here to allow concurrent processing
 
             # Stream tokens as they arrive
-            while True:
-                try:
-                    # Wait for next token with timeout
-                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=20.0)
-                    if item is None:  # End of stream signal
+            try:
+                while True:
+                    try:
+                        # Wait for next token with timeout
+                        item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=20.0)
+                        if item is None:  # End of stream signal
+                            break
+                        
+                        # Send item to web client based on type
+                        if isinstance(item, dict):
+                            if item.get("type") == "text":
+                                data = f"data: {json.dumps({'content': item['content']})}\n\n"
+                                yield data
+                            elif item.get("type") == "file":
+                                print(f"🔍 DEBUG: Sending file to client: {item['file_info']}")  # Debug
+                                data = f"data: {json.dumps({'file': item['file_info']})}\n\n"
+                                yield data
+                            elif item.get("type") == "error":
+                                print(f"❌ Sending error to client: {item['error']}")  # Debug
+                                data = f"data: {json.dumps({'error': item['error']})}\n\n"
+                                yield data
+                        else:
+                            # Backwards compatibility for plain text
+                            data = f"data: {json.dumps({'content': item})}\n\n"
+                            yield data
+                        
+                    except asyncio.TimeoutError:
+                        yield f"data: {json.dumps({'error': 'Response timeout after 20 seconds'})}\n\n"
                         break
-                    
-                    # Send item to web client based on type
-                    if isinstance(item, dict):
-                        if item.get("type") == "text":
-                            yield f"data: {json.dumps({'content': item['content']})}\n\n"
-                        elif item.get("type") == "file":
-                            print(f"🔍 DEBUG: Sending file to client: {item['file_info']}")  # Debug
-                            yield f"data: {json.dumps({'file': item['file_info']})}\n\n"
-                        elif item.get("type") == "error":
-                            print(f"❌ Sending error to client: {item['error']}")  # Debug
-                            yield f"data: {json.dumps({'error': item['error']})}\n\n"
-                    else:
-                        # Backwards compatibility for plain text
-                        yield f"data: {json.dumps({'content': item})}\n\n"
-                    
-                except asyncio.TimeoutError:
-                    yield f"data: {json.dumps({'error': 'Response timeout after 20 seconds'})}\n\n"
-                    break
+            finally:
+                # Ensure the stream task is properly cleaned up
+                if not stream_task.done():
+                    stream_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await stream_task
 
             # Add complete message to session
             if web_handler.assistant_message:
