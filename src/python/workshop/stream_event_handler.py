@@ -28,7 +28,7 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
         """Override to capture tokens for web streaming instead of terminal output."""
         if delta.text:
             self.assistant_message += delta.text
-            # Put token in queue for web streaming instead of printing to terminal
+            # Put token in queue for web streaming
             await self.token_queue.put({"type": "text", "content": delta.text})
     
     async def on_thread_message(self, message: ThreadMessage) -> None:
