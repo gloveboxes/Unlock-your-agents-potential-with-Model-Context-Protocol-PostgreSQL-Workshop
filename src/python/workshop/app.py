@@ -17,8 +17,6 @@ from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, AsyncT
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
 from config import Config
-
-# from agent_manager import AgentManager
 from fastapi import FastAPI
 from mcp_client import fetch_and_build_mcp_tools
 from opentelemetry import trace

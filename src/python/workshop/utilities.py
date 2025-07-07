@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, ThreadMessage
