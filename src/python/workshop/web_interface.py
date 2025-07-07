@@ -4,14 +4,18 @@ from pathlib import Path
 from typing import AsyncGenerator, Dict, List
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, MessageDeltaChunk, ThreadMessage
+from azure.ai.agents.models import (
+    Agent,
+    AgentThread,
+    AsyncFunctionTool,
+)
 from azure.ai.projects.aio import AIProjectClient
 from config import Config
 from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from opentelemetry import trace
-from stream_event_handler import StreamEventHandler
+from stream_event_handler import WebStreamEventHandler
 from utilities import Utilities
 
 
@@ -139,45 +143,9 @@ class WebInterface:
     async def _generate_stream(self, message: str, session_id: str) -> AsyncGenerator[str, None]:
         """Generate streaming response for chat."""
         try:
-            # Create a custom streaming event handler that captures tokens for web output
-            class WebStreamEventHandler(StreamEventHandler):
-                def __init__(self, utilities: Utilities, mcp_tools: AsyncFunctionTool, 
-                           project_client: AIProjectClient, agents_client: AgentsClient) -> None:
-                    super().__init__(
-                        functions=mcp_tools if mcp_tools else AsyncFunctionTool(set()),
-                        project_client=project_client,
-                        agents_client=agents_client,
-                        utilities=utilities,
-                    )
-                    self.assistant_message = ""
-                    self.token_queue: asyncio.Queue = asyncio.Queue()
-
-                async def on_message_delta(self, delta: MessageDeltaChunk) -> None:
-                    """Override to capture tokens for web streaming instead of terminal output."""
-                    if delta.text:
-                        self.assistant_message += delta.text
-                        # Put token in queue for web streaming instead of printing to terminal
-                        await self.token_queue.put({"type": "text", "content": delta.text})
-                    
-                    # Don't call the parent method which would print to terminal
-                    # super().on_message_delta(delta) - skip this to avoid terminal output
-                
-                async def on_thread_message(self, message: ThreadMessage) -> None:
-                    """Override to capture files and send them to web interface."""
-                    # print(f"🔍 DEBUG: on_thread_message called")  # Debug
-                    # Call parent to download files
-                    await super().on_thread_message(message)
-                    
-                    # print(f"🔍 DEBUG: generated_files length: {len(self.generated_files)}")  # Debug
-                    # Send file information to web interface
-                    if self.generated_files:
-                        for file_info in self.generated_files:
-                            print(f"🔍 DEBUG: Sending file info: {file_info}")  # Debug
-                            await self.token_queue.put({"type": "file", "file_info": file_info})
-
-            # Create the event handler
+            # Create the web streaming event handler
             web_handler = WebStreamEventHandler(
-                self.utilities, self.mcp_tools, self.project_client, self.agents_client
+                self.utilities, self.agents_client
             )
 
             # Create a span for this chat request with more descriptive naming
@@ -237,7 +205,8 @@ class WebInterface:
             while True:
                 try:
                     # Wait for next token with timeout
-                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=60.0)
+                    item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=10.0)
+                    print(f"🔍 DEBUG: Received item from queue: {item}")  # Debug
                     if item is None:  # End of stream signal
                         break
                     
