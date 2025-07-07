@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any, List, Optional
 
@@ -14,6 +15,20 @@ class Utilities:
     def shared_files_path(self) -> Path:
         """Get the path to the shared files directory."""
         return Path(__file__).parent.parent.parent.resolve() / "shared"
+    
+
+    @staticmethod
+    def suppress_logs() -> None:
+        """Suppress verbose Azure SDK logs to reduce noise in output."""
+        for name in [
+            "azure.core.pipeline.policies.http_logging_policy",
+            "azure.ai.agents",
+            "azure.ai.projects",
+            "azure.core",
+            "azure.identity",
+            "uvicorn.access",
+        ]:
+            logging.getLogger(name).setLevel(logging.WARNING)
 
     async def validate_azure_authentication(self) -> DefaultAzureCredential:
         """Validate Azure authentication before proceeding."""

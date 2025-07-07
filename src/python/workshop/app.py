@@ -26,23 +26,12 @@ from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 from web_interface import WebInterface
 
-# Initialize logging
-logger = logging.getLogger(__name__)
-
 # Configure logging - suppress verbose Azure SDK logs
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.ERROR)
-for logger_name in [
-    "azure.core.pipeline.policies.http_logging_policy",
-    "azure.ai.agents",
-    "azure.ai.projects",
-    "azure.core",
-    "azure.identity",
-    "uvicorn.access",  # Suppress uvicorn access logs
-]:
-    logging.getLogger(logger_name).setLevel(logging.WARNING)
+Utilities.suppress_logs()
 
 # Agent Instructions
-INSTRUCTIONS_FILE = "instructions/mcp_server_tools.txt"
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
 TELEMETRY_ENABLED = False
 
@@ -63,6 +52,25 @@ class AgentManager:
         code_interpreter = CodeInterpreterTool()
         self.toolset.add(code_interpreter)
 
+    async def _create_agent(self, instructions: str) -> None:
+        with tracer.start_as_current_span(trace_scenario):
+            print("Creating agent...")
+            self.agent = await self.agents_client.create_agent(
+                model=Config.API_DEPLOYMENT_NAME,
+                name=Config.AGENT_NAME,
+                instructions=instructions,
+                toolset=self.toolset,
+                temperature=Config.TEMPERATURE,
+            )
+            print(f"Created agent, ID: {self.agent.id}")
+
+            self.agents_client.enable_auto_function_calls(tools=self.toolset)
+            print("Enabled auto function calls.")
+
+            print("Creating thread...")
+            self.thread = await self.agents_client.threads.create()
+            print(f"Created thread, ID: {self.thread.id}")
+
     def __init__(self) -> None:
         self.utilities = Utilities()
         self.agents_client: AgentsClient | None = None
@@ -78,14 +86,11 @@ class AgentManager:
             # Validate configuration
             Config.validate_required_env_vars()
 
-            # Load instructions
-            instructions = self.utilities.load_instructions(instructions_file)
-
             # Validate Azure Entra ID Authentication
             credential = await self.utilities.validate_azure_authentication()
             print("✅ Azure Entra ID authentication successful!")
 
-            # Create clients
+            # Create agent clients
             self.agents_client = AgentsClient(
                 credential=credential,
                 endpoint=Config.PROJECT_ENDPOINT,
@@ -103,27 +108,8 @@ class AgentManager:
             if TELEMETRY_ENABLED:
                 configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
 
-            with tracer.start_as_current_span(trace_scenario):
-                # Create agent
-                print("Creating agent...")
-                self.agent = await self.agents_client.create_agent(
-                    model=Config.API_DEPLOYMENT_NAME,
-                    name=Config.AGENT_NAME,
-                    instructions=instructions,
-                    toolset=self.toolset,
-                    temperature=Config.TEMPERATURE,
-                )
-                print(f"Created agent, ID: {self.agent.id}")
-
-                # Enable auto function calls
-                self.agents_client.enable_auto_function_calls(
-                    tools=self.toolset)
-                print("Enabled auto function calls.")
-
-                # Create thread
-                print("Creating thread...")
-                self.thread = await self.agents_client.threads.create()
-                print(f"Created thread, ID: {self.thread.id}")
+            instructions = self.utilities.load_instructions(instructions_file)
+            await self._create_agent(instructions)
 
             return True
 
@@ -169,14 +155,10 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     if not success:
         print(
             f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
-    else:
+    elif agent_manager.is_initialized:
         print(
             f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
-
-        # Inject dependencies into web interface
-        if web_interface and agent_manager.is_initialized:
-            web_interface.inject_dependencies(
-                *agent_manager.get_dependencies())
+        web_interface.inject_dependencies(*agent_manager.get_dependencies())
 
     yield
 
@@ -189,16 +171,6 @@ app = FastAPI(title="Azure AI Agent Chat", lifespan=lifespan)
 
 # Initialize web interface
 web_interface = WebInterface(app, utilities, tracer)
-
-
-async def main() -> None:
-    """
-    Run the FastAPI web application.
-    Example questions: Sales by region, top-selling products, total shipping costs by region, show as a pie chart.
-    """
-    print("Starting Azure AI Agent Web Chat...")
-    print("The web interface will be available at http://127.0.0.1:8005")
-    print("Access the chat interface in your browser after startup completes.")
 
 
 if __name__ == "__main__":
