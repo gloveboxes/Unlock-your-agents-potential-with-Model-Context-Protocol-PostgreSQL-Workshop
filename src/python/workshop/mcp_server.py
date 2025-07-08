@@ -95,8 +95,9 @@ async def get_inventory_table_schema() -> str:
 
 @mcp.tool()
 async def get_stores_table_schema() -> str:
-    """Get the complete schema information for the stores table. **ALWAYS call this tool first** when queries involve store locations, store names, or store-related analysis. This provides table structure with store_id and store_name only - a clean reference table for store information.
-    Note: This table contains only core store information (store_id, store_name). Store performance data comes from joining with orders table.
+    """Get the complete schema information for the stores table. **ALWAYS call this tool first** when queries involve store locations, store names, store types, or store-related analysis. This provides table structure with store_id, store_name, and is_online flag - a clean reference table for store information.
+    Note: This table contains core store information (store_id, store_name, is_online). Store performance data comes from joining with orders table.
+    **STORE TYPE IDENTIFICATION**: Use the is_online boolean flag to distinguish between online and physical stores. When is_online = true, the store is online; when is_online = false, the store is physical.
     """
     return await get_table_schema("stores")
 
@@ -143,6 +144,10 @@ async def execute_sales_query(postgresql_query: str) -> str:
 
     QUERY GUIDELINES:
     - **ALWAYS RETURN HUMAN-READABLE NAMES**: Never return just IDs - always include names alongside IDs
+    - **STORE TYPE IDENTIFICATION**: Use the is_online boolean flag to distinguish between online and physical stores:
+      * Online stores: WHERE s.is_online = true
+      * Physical stores: WHERE s.is_online = false
+      * Store type in results: CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type
     - **MANDATORY JOINS FOR READABILITY**:
       * Products: ALWAYS join with categories and product_types to get category_name, type_name
       * Customers: ALWAYS include customer first_name, last_name (not just customer_id)
@@ -162,6 +167,9 @@ async def execute_sales_query(postgresql_query: str) -> str:
     EXAMPLE GOOD QUERIES:
     - Product Sales: SELECT cat.category_name, pt.type_name, p.product_name, p.sku, SUM(oi.total_price) as revenue FROM products p JOIN categories cat ON p.category_id = cat.category_id JOIN product_types pt ON p.type_id = pt.type_id JOIN order_items oi ON p.product_id = oi.product_id GROUP BY cat.category_name, pt.type_name, p.product_name, p.sku ORDER BY revenue DESC
     - Customer Orders: SELECT c.first_name, c.last_name, s.store_name, o.order_date, COUNT(*) as order_count FROM orders o JOIN customers c ON o.customer_id = c.customer_id JOIN stores s ON o.store_id = s.store_id GROUP BY c.first_name, c.last_name, s.store_name, o.order_date
+    - Online vs Physical Store Sales: SELECT CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type, SUM(oi.total_price) as total_revenue FROM orders o JOIN stores s ON o.store_id = s.store_id JOIN order_items oi ON o.order_id = oi.order_id GROUP BY s.is_online ORDER BY total_revenue DESC
+    - Physical Store Performance: SELECT s.store_name, SUM(oi.total_price) as revenue FROM orders o JOIN stores s ON o.store_id = s.store_id JOIN order_items oi ON o.order_id = oi.order_id WHERE s.is_online = false GROUP BY s.store_name ORDER BY revenue DESC
+    - Online Store Analysis: SELECT s.store_name, COUNT(DISTINCT o.order_id) as order_count, SUM(oi.total_price) as revenue FROM orders o JOIN stores s ON o.store_id = s.store_id JOIN order_items oi ON o.order_id = oi.order_id WHERE s.is_online = true GROUP BY s.store_name ORDER BY revenue DESC
 
     Args:
         postgresql_query: A well-formed PostgreSQL query to extract sales data.
