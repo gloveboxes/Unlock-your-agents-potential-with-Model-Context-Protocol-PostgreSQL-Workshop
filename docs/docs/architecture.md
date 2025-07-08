@@ -21,7 +21,7 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
     The app is powered by the Zava Sales Database, a [Azure Database for PostgreSQL flexible server](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. The database includes:
     
      - **50,000+ customer records** across Washington State and online
-     - **300+ DIY products** including tools, outdoor equipment, and home improvement supplies  
+     - **400+ DIY products** including tools, outdoor equipment, and home improvement supplies  
      - **200,000+ order transactions** with detailed sales history
      - **Vector embeddings** for product images enabling AI-powered similarity searches
      
