@@ -32,7 +32,6 @@ Utilities.suppress_logs()
 # Agent Instructions
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools.txt"
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
-AZURE_TELEMETRY_ENABLED = False
 
 
 trace_scenario = "Zava Agent Initialization"
@@ -89,8 +88,7 @@ class AgentManager:
             await self._setup_tools()
 
             # Enable Azure Monitor Telemetry
-            if AZURE_TELEMETRY_ENABLED:
-                configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
+            configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
 
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
