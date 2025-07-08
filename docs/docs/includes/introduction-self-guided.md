@@ -233,7 +233,7 @@ There are two workspaces in the workshop, one for Python and one for C#. The wor
 
     ### The workshop folder
 
-    - The **main.py** file: The entry point for the app, containing its main logic.
+    - The **app.py** file: The entry point for the app, containing its main logic.
     - The **sales_data.py** file: The function logic to execute dynamic SQL queries against the SQLite database.
     - The **stream_event_handler.py** file: Contains the event handler logic for token streaming.
 

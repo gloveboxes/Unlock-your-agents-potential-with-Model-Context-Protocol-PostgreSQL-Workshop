@@ -207,6 +207,7 @@ class WebInterface:
                             await web_handler.token_queue.put(None)
                     
                     # Start the stream task without awaiting it - keep reference to prevent GC
+                    # This allows the stream to run concurrently while feeding tokens to the client web app
                     stream_task = asyncio.create_task(run_stream())
                     # We don't await the task here to allow concurrent processing
 

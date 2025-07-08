@@ -33,7 +33,7 @@ In this lab, you will use the HTTP API interface to connect the LLM with a Postg
 
     #### Start the Agent
 
-      1. Open the `main.py` and enable the agent MCP tools by uncommenting the following lines:
+      1. Open the `app.py` and enable the agent MCP tools by uncommenting the following lines:
 
          Uncomment the following lines by removing the "# " characters
 
@@ -46,7 +46,7 @@ In this lab, you will use the HTTP API interface to connect the LLM with a Postg
         !!! warning "Ensure you remove the space after the `#` character"
             The lines to be uncommented are not adjacent. When removing the `#` character, ensure you also delete the space that follows it.
 
-      1. Review the code in the `main.py` file.
+      1. Review the code in the `app.py` file.
 
          After uncommenting, your code should look like this:
 

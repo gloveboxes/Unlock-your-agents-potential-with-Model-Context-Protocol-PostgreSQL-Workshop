@@ -22,7 +22,7 @@ By leveraging PGVECTOR, you can efficiently compare image vectors and retrieve v
         !!! warning
             The lines to be uncommented are not adjacent. When removing the `#` character, ensure you also delete the space that follows it.
 
-    3. Review the code in the `main.py` file.
+    3. Review the code in the `app.py` file.
 
         After uncommenting, your code should look like this:
 

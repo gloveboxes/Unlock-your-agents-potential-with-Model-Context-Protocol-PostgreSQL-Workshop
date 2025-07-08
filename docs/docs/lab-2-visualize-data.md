@@ -8,7 +8,7 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
 
 === "Python"
 
-    1. Open the `main.py`.
+    1. Open the `app.py`.
 
     2. Define a new instructions file for our agent and add the code interpreter in the agent's toolset. **Uncomment** the following lines by removing the **"# "** characters.
 
@@ -22,7 +22,7 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
         !!! warning
             The lines to be uncommented are not adjacent. When removing the # character, ensure you also delete the space that follows it.
 
-    3. Review the code in the `main.py` file.
+    3. Review the code in the `app.py` file.
 
         After uncommenting, your code should look like this:
 
@@ -50,14 +50,6 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
 
     TBD
 
-## Review the Instructions
-
-1. Open the **shared/instructions/mcp_server_tools_with_code_interpreter.txt** file. This file replaces the instructions used in the previous lab.
-2. The **Tools** section now includes a “Visualization and Code Interpretation” capability, allowing the agent to:
-
-      - Use the code interpreter to run LLM generated Python code. (e.g., for downloading or visualizing data).
-      - Create charts and graphs, using the user’s language for labels, titles, and other chart text.
-      - Export visualizations as PNG files and data as CSV files.
 
 ## Run the Agent App
 
@@ -66,7 +58,11 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
 
 ### Start a Conversation with the Agent
 
-Try these questions:
+**Show the top 10 products by revenue by store**
+
+
+
+Try this question:
 
 1. **Show sales by region as a pie chart**
 

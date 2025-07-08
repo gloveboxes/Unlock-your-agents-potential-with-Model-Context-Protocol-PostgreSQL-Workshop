@@ -154,7 +154,7 @@ Next, we log in to Azure AI Foundry to retrieve the project endpoint, which the 
 
     Be sure to familiarize yourself with the key **subfolders** and **files** you’ll be working with throughout the workshop.
 
-    5. The **main.py** file: The entry point for the app, containing its main logic.
+    5. The **app.py** file: The entry point for the app, containing its main logic.
     6. The **sales_data.py** file: The function logic to execute dynamic SQL queries against the SQLite database.
     7. The **stream_event_handler.py** file: Contains the event handler logic for token streaming.
     8. The **shared/files** folder: Contains the files created by the agent app.
