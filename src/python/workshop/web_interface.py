@@ -57,6 +57,7 @@ class WebInterface:
     def _setup_routes(self) -> None:
         """Setup all web routes."""
         self.app.get("/", response_class=HTMLResponse)(self.get_chat_page)
+        self.app.get("/favicon.ico", response_class=FileResponse)(self.get_favicon)
         self.app.post("/upload")(self.upload_file)
         self.app.get("/chat/stream")(self.stream_chat)
         self.app.get("/files/{filename}")(self.serve_file)
@@ -66,6 +67,11 @@ class WebInterface:
         html_file = Path(__file__).parent.parent.parent / "shared" / "static" / "index.html"
         with html_file.open("r") as f:
             return HTMLResponse(content=f.read())
+    
+    async def get_favicon(self) -> FileResponse:
+        """Serve the favicon.ico file."""
+        favicon_path = Path(__file__).parent.parent.parent / "shared" / "static" / "favicon.ico"
+        return FileResponse(favicon_path, media_type="image/x-icon")
     
     async def upload_file(self, file: UploadFile, message: str = Form(None)) -> Dict:
         """Handle file upload and extract text content."""
