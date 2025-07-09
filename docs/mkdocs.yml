@@ -2,7 +2,7 @@ site_name: Unlock your agents potential with Model Context Protocol and PostgreS
 
 nav:
   - Introduction: index.md
-  - MCP Overview: mcp-overview.md
+  - Introduction to MCP: mcp-overview.md
   - Solution Architecture: architecture.md
   - Security Considerations: security.md
   - Getting Started: getting-started.md
