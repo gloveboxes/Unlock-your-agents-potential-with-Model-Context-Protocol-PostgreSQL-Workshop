@@ -12,6 +12,15 @@ In this lab, you will:
 
 The Model Context Protocol (MCP) server is a crucial component that handles the communication between Large Language Models (LLMs) and external tools and data sources. Before you can interact with the agent and use MCP tools, you need to start this server.
 
+## Interface options for MCP
+
+MCP supports two main interfaces for connecting LLMs with tools:
+
+- **HTTP API**: For web-based APIs and services.
+- **Stdio**: For local scripts and command-line tools.
+
+This lab uses the HTTP API interface to integrate with the Azure AI Foundry Agent Service.
+
 ### Starting the MCP Server
 
 === "Python"

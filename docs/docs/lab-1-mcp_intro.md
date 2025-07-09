@@ -13,13 +13,6 @@ In this lab, you will:
 
 The Model Context Protocol (MCP) is a standard that connects Large Language Models (LLMs) with external tools and data sources, such as databases and APIs, through a consistent interface. This enables smarter, more extensible AI applications.
 
-### Interface options for MCP
-
-MCP supports two main interfaces for connecting LLMs with tools:
-
-- **HTTP API** (used in this lab): For web-based APIs and services.
-- **Stdio**: For local scripts and command-line tools.
-
 ### Lab Exercise
 
 !!! info "Prerequisites"
