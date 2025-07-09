@@ -79,6 +79,4 @@ markdown_extensions:
 extra_css:
   - css/custom.css
 
-# mkdocs.yml
-extra_javascript:
-  - js/custom-nav.js
+
