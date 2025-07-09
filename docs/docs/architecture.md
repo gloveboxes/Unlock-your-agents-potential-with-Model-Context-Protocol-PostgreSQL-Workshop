@@ -1,4 +1,4 @@
-## Solution Architecture. 
+## Solution Architecture
 
 In this workshop, you will create the Zava Sales Agent: a conversational agent designed to answer questions about sales data, generate charts, provide product recommendations, and support image-based product searches for Zava's retail DIY business.
 
@@ -19,14 +19,23 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 3. **Database**
 
     The app is powered by the Zava Sales Database, a [Azure Database for PostgreSQL flexible server](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. The database includes:
-    
+
      - **50,000+ customer records** across Washington State and online
-     - **400+ DIY products** including tools, outdoor equipment, and home improvement supplies  
+     - **400+ DIY products** including tools, outdoor equipment, and home improvement supplies
      - **200,000+ order transactions** with detailed sales history
      - **Vector embeddings** for product images enabling AI-powered similarity searches
-     
+
      The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
 
+4. **MCP Server**
+
+    The Model Context Protocol (MCP) server is a custom Python service that acts as a bridge between the agent and the PostgreSQL database. It handles:
+
+     - **Schema Discovery**: Automatically retrieves database schemas to help the agent understand available data.
+     - **Query Generation**: Transforms natural language requests into SQL queries.
+     - **Tool Execution**: Executes SQL queries and returns results in a format the agent can use.
+     - **Image Search**: Supports image-based product searches using vector embeddings.
+     - **Time Services**: Provides time-related data for generating time-sensitive reports.
 
 ## Extending the Workshop Solution
 
