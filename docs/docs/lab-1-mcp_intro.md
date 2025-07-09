@@ -2,11 +2,12 @@
 
 In this lab, you will:
 
-- Understand the basics of the Model Context Protocol (MCP) and its role in connecting LLMs to external tools and data sources
-- Start and interact with a local MCP server
-- Enable and configure MCP tools for an AI agent
+- Configure and enable MCP tools for an AI agent
 - Review and extend agent instructions for real-world scenarios
 - Practice asking the agent questions about sales data, products, and inventory
+
+!!! info "Prerequisites"
+    This lab assumes you have completed Lab 0 and have the MCP server running in the background.
 
 ## Introduction
 
@@ -21,23 +22,12 @@ MCP supports two main interfaces for connecting LLMs with tools:
 
 ### Lab Exercise
 
+!!! info "Prerequisites"
+    Before starting this lab, make sure you have completed Lab 0 and have the MCP server running.
+
 === "Python"
 
-    #### Start the MCP Server
-
-      To begin, you need to start the MCP server, which will handle the communication between the LLM and the external tools. 
-      
-      1. Open a terminal in VS Code
-      2. From the terminal run the following commands to start the MCP server:
-
-         ```bash
-         cd /workspace/src/python/mcp
-         python mcp_server.py
-         ```
-
-         This command starts the MCP server, which listens for incoming requests from the LLM and routes them to the appropriate tools.
-
-    #### Start the Agent
+    #### Configure the Agent
 
       1. Open the `app.py` and enable the agent MCP tools by uncommenting the following lines:
 
