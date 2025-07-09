@@ -23,6 +23,8 @@ This lab uses the HTTP API interface to integrate with the Azure AI Foundry Agen
 
 ### Starting the MCP Server
 
+Normally, you'd deploy the MCP server in a production environment, but for this workshop, you'll run it locally in your development environment. This allows you to test and interact with the MCP tools without needing a full deployment.
+
 === "Python"
 
     #### Start the MCP Server
