@@ -28,10 +28,10 @@ Because orders are standardized, any chef (server) can fulfill them, and any cus
 
 ### Key Components on an MCP Server
 
-- **Resources:** Structured or unstructured data sources (e.g., databases, files, APIs) that provide the model with up-to-date information beyond its training data.
-- **Prompts:** Templates or scripts that guide the model's behavior, ensuring consistent and context-aware responses for specific tasks or workflows.
-- **Tools:** Executable functions or APIs that the model can call to perform actions such as searching, calculations, database queries, or external service integrations.
-- **Sampling:** Mechanisms that enable the model to make decisions, iterate, or call tools recursively—supporting agent-like, multi-step reasoning and dynamic workflows.
+- **Resources** – Data sources (databases, APIs, file stores) the server can query and return in a canonical format.
+- **Tools** – Named functions or APIs registered with the server that it can execute on demand.
+- **Prompts (optional)** – Versioned prompt templates the server can store for reuse across models or projects.
+- **Policies (optional)** – Limits and safety checks (rate, depth, authentication) the server enforces around each tool call.
 
 ### Server Workflow
 
