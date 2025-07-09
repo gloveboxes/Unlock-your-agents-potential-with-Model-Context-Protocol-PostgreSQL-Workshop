@@ -54,9 +54,8 @@ In this workshop, the MCP server connects the Azure AI Agent with Zava's sales d
 1. The LLM generates MCP Server requests based on your query
 1. The MCP Server:
       1. Provides schema info to help the LLM generate accurate queries
-      2. Runs SQL queries and returns results
-      3. Returns structured data for natural-language responses
-      4. Provides time services for time-sensitive reports
+      2. Runs SQL queries and returns structured data for natural-language responses
+      3. Provides time services for time-sensitive reports
 
 <!-- 4. It enables image search via [pgvector](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-use-pgvector){:target="_blank"} -->
 
