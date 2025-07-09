@@ -27,8 +27,6 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
      
      The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
 
-### Architecture
-pgvector
 
 ## Extending the Workshop Solution
 

@@ -53,30 +53,6 @@ The Foundry Agent Service offers several advantages over traditional agent platf
 
 Learn more about the Foundry Agent Service in the [Foundry Agent Service documentation](https://learn.microsoft.com/azure/ai-services/agents/overview){:target="_blank"}.
 
-## Introduction to the Model Context Protocol (MCP)
-
-The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/){:target="_blank"} is an open standard that enables secure, controlled access to resources for Large Language Models (LLMs). Developed by Anthropic, MCP provides a universal protocol for connecting AI assistants to various data sources and tools, ensuring efficient and secure interactions.
-
-### Key Benefits of MCP
-
-- **Standardized Integration**: MCP provides a consistent way to connect LLMs to external data sources and tools
-- **Security**: Built-in access controls and secure communication between the LLM and external resources  
-- **Flexibility**: Support for various data sources including databases, APIs, file systems, and more
-- **Performance**: Efficient data transfer and caching mechanisms for optimal response times
-
-### MCP in the Zava Sales Agent
-
-In this workshop, the MCP server acts as the bridge between the Azure AI Agent and the PostgreSQL database containing Zava's sales data. When you ask questions about products, sales trends, or inventory, the MCP server:
-
-1. **Receives Tool Calls**: The LLM generates tool calls based on your natural language queries
-2. **Executes Database Operations**: The MCP server safely executes SQL queries against the PostgreSQL database
-3. **Provides Schema Information**: Dynamically provides table schemas and relationships to help the LLM generate accurate queries
-4. **Enables Image Search**: Leverages Azure Database for PostgreSQL flexible server [pgvector](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-use-pgvector?utm_source=chatgpt.com){:target="_blank"} extension for AI-powered product image similarity searches
-5. **Returns Structured Data**: Sends formatted results back to the LLM for natural language responses
-6. **Provides Time Services**: Uses the MCP server to access time-related data, such as current date and time, which can be useful for generating time-sensitive reports or analyses.
-
-This architecture allows the agent to provide real-time insights about Zava's operations while maintaining security and performance.st agent with Azure AI Foundry
-
 ## AI Agent Frameworks
 
 Popular agent frameworks include LangChain, Semantic Kernel, and CrewAI. What distinguishes the Foundry Agent Service is its seamless integration capabilities and an SDK optimized for rapid deployment. In complex multi-agent scenarios, solutions will combine SDKs like Semantic Kernel and AutoGen with the Foundry Agent Service to build robust and scalable systems.
