@@ -37,7 +37,7 @@ Tracing helps you understand and debug your agent's behavior by showing the sequ
 Copy and paste the following prompt into the agent app to start a conversation:
 
 ```plaintext
-Write an executive report that analysis the top 5 product categories and compares performance of the online store verses physical stores.
+Write an executive report that analysis the top 5 product categories and compares performance of the online store verses the average for the physical stores.
 ```
 
 ## View Traces
