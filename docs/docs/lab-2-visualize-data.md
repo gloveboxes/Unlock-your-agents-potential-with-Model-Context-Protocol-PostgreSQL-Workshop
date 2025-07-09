@@ -1,3 +1,13 @@
+## What You'll Learn
+
+In this lab, you will:
+
+- Enable the Code Interpreter for the agent
+- Configure the agent to generate and execute Python code for data analysis and visualization
+- Use natural language to create charts and analyze sales data
+- Download and review generated files (charts, JSON, etc.)
+- Explore how the agent orchestrates SQL, Python, and chart generation
+
 ## Introduction
 
 The Foundry Agent Service Code Interpreter enables the LLM to safely execute Python code for tasks such as creating charts or performing complex data analyses based on user queries. It uses natural language processing (NLP), sales data from a PostgreSQL database accessed through MCP (Model Context Protocol), and user prompts to automate code generation. The LLM-generated Python code executes within a secure sandbox environment, running on a restricted subset of Python to ensure safe and controlled execution.

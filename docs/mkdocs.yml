@@ -1,8 +1,8 @@
 site_name: Unlock your agents potential with Model Context Protocol and PostgreSQL Workshop
 
 nav:
-  - Introduction: index.md
-  - Introduction to MCP: mcp-overview.md
+  - Workshop Introduction: index.md
+  - Overview of MCP: mcp-overview.md
   - Solution Architecture: architecture.md
   - Security Considerations: security.md
   - Getting Started: getting-started.md

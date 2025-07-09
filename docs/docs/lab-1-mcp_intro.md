@@ -1,17 +1,23 @@
+## What You'll Learn
+
+In this lab, you will:
+
+- Understand the basics of the Model Context Protocol (MCP) and its role in connecting LLMs to external tools and data sources
+- Start and interact with a local MCP server
+- Enable and configure MCP tools for an AI agent
+- Review and extend agent instructions for real-world scenarios
+- Practice asking the agent questions about sales data, products, and inventory
+
 ## Introduction
 
-The Model Context Protocol (MCP) is an emerging standard designed to connect Large Language Models (LLMs) with external tools and data sources in a consistent, scalable way. MCP acts as a universal interface, allowing LLMs to interact seamlessly with resources like databases, APIs, and time/date services—enabling smarter, more extensible AI applications.
-
-In this lab, you’ll use MCP to bridge an LLM with both a PostgreSQL database and a date/time source. MCP is rapidly becoming the standard for tool integration across platforms like Agents Service, Copilot, and many other AI ecosystems. By adopting MCP, you gain a future-proof, plug-and-play architecture for building powerful, interoperable AI solutions.
+The Model Context Protocol (MCP) is a standard that connects Large Language Models (LLMs) with external tools and data sources, such as databases and APIs, through a consistent interface. This enables smarter, more extensible AI applications.
 
 ### Interface options for MCP
 
-MCP provides a flexible interface for connecting LLMs with external tools and data sources. Here are the key options:
+MCP supports two main interfaces for connecting LLMs with tools:
 
-- **HTTP API**: The most common interface, allowing LLMs to make HTTP requests to external services. This is ideal for web-based APIs and services and allows for streaming and batch processing responses from tools.
-- **Stdio**: A simple interface that allows LLMs to communicate with external tools via standard input/output streams. This is useful for local scripts and command-line tools.
-
-In this lab, you will use the HTTP API interface to connect the LLM with a PostgreSQL database and a date/time service. We'll be running the MCP server locally, which will handle the communication between the LLM and the external tools. But in production, you would deploy the MCP Server to Azure using Azure Container Apps or Azure Functions, allowing you to secure, scale and manage the service effectively.
+- **HTTP API** (used in this lab): For web-based APIs and services.
+- **Stdio**: For local scripts and command-line tools.
 
 ### Lab Exercise
 

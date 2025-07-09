@@ -1,4 +1,4 @@
-MCP (Model Context Protocol) is an open standard that allows large-language models (LLMs) to call external tools, APIs, and data sources through a consistent, well-defined interface — similar to how USB-C standardizes device connections, or [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity){:target "_blank"} standardizes interfaces for databases.
+MCP (Model Context Protocol) is an emerging open standard that allows large-language models (LLMs) to call external tools, APIs, and data sources through a consistent, well-defined interface — similar to how USB-C standardizes device connections, or [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity){:target "_blank"} standardizes interfaces for databases.
 
 ## Benefits of MCP
 
