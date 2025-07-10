@@ -4,7 +4,7 @@
 		{
 			"label": "Run Agent Web Chat (Legacy)",
 			"type": "shell",
-			"command": "cd src/python/workshop && python app.py",
+			"command": "python app.py",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [],
@@ -13,29 +13,38 @@
 		{
 			"label": "Run Agent Service",
 			"type": "shell",
-			"command": "cd src/python/workshop && python agent_service.py",
+			"command": "python agent_service.py",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [],
-			"args": []
+			"args": [],
+			"options": {
+				"cwd": "${workspaceFolder}/src/python/workshop"
+			}
 		},
 		{
 			"label": "Run Web App",
 			"type": "shell",
-			"command": "cd src/python/web_app && python web_app.py",
+			"command": "python web_app.py",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [],
-			"args": []
+			"args": [],
+			"options": {
+				"cwd": "${workspaceFolder}/src/shared/web_app"
+			}
 		},
 		{
 			"label": "Run MCP Server",
 			"type": "shell",
-			"command": "cd src/python/mcp && python mcp_server_sales_analysis.py",
+			"command": "python mcp_server_sales_analysis.py",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [],
-			"args": []
+			"args": [],
+			"options": {
+				"cwd": "${workspaceFolder}/src/shared/mcp"
+			}
 		}
 	]
 }
