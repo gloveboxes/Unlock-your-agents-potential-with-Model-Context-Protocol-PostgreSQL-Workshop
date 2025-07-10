@@ -58,7 +58,7 @@ Normally, you'd deploy the MCP server in a production environment, but for this 
     1. Next, in the terminal where the MCP server is running, start a DevTunnel by running:
 
         ```bash
-        devtunnel create --port 8010 --allow-anonymous
+        devtunnel host -p 8010 --allow-anonymous
         ```
 
         This will output a URL that you'll need for the agent to connect to the MCP server. The output will be similar to:
