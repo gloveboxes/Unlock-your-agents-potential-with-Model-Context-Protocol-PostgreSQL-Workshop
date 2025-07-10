@@ -24,7 +24,7 @@ RESPONSE_TIMEOUT_SECONDS= 60
 class WebInterface:
     """Handles all web interface functionality for the AI Agent Chat application."""
     
-    def __init__(self, app: FastAPI, utilities: Utilities, tracer: trace) -> None:
+    def __init__(self, app: FastAPI, utilities: Utilities, tracer: trace.Tracer) -> None:
         """Initialize the web interface with FastAPI app and utilities."""
         self.app = app
         self.utilities = utilities
