@@ -13,12 +13,11 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Tuple
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import Agent, AgentThread, AsyncFunctionTool, AsyncToolSet, CodeInterpreterTool
+from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
 from config import Config
 from fastapi import FastAPI
-from mcp_client import fetch_and_build_mcp_tools
 from opentelemetry import trace
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
@@ -43,10 +42,6 @@ class AgentManager:
 
     async def _setup_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
-        # Fetch and build MCP tools dynamically
-        self.mcp_tools = await fetch_and_build_mcp_tools()
-        self.toolset.add(self.mcp_tools)
-
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
         self.toolset.add(code_interpreter)
@@ -57,7 +52,6 @@ class AgentManager:
         self.project_client: AIProjectClient | None = None
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
-        self.mcp_tools: AsyncFunctionTool | None = None
         self.toolset = AsyncToolSet()
 
     async def initialize(self, instructions_file: str) -> bool:
@@ -93,11 +87,11 @@ class AgentManager:
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
                 print("Creating agent...")
-                if not Config.API_DEPLOYMENT_NAME:
+                if not Config.MODEL_DEPLOYMENT_NAME:
                     raise ValueError(
                         "Config.API_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
-                    model=Config.API_DEPLOYMENT_NAME,
+                    model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
                     # toolset=self.toolset,
@@ -105,7 +99,7 @@ class AgentManager:
                         {
                             "type": "mcp",
                                     "server_label": "github",
-                                    "server_url": "https://tp4cc3c9-8010.aue.devtunnels.ms/mcp/",
+                                    "server_url": Config.DEV_TUNNEL_URL,
                                     "require_approval": "never"
                         },
                         {
@@ -115,11 +109,6 @@ class AgentManager:
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
-
-                # Enable auto function calls
-                self.agents_client.enable_auto_function_calls(
-                    tools=self.toolset)
-                print("Enabled auto function calls.")
 
                 # Create thread
                 print("Creating thread...")
@@ -141,9 +130,9 @@ class AgentManager:
             except Exception as e:
                 print(f"Warning: Error during cleanup: {e}")
 
-    def get_dependencies(self) -> Tuple[AgentsClient, AIProjectClient, Agent, AgentThread, AsyncFunctionTool]:
+    def get_dependencies(self) -> Tuple[AgentsClient, AIProjectClient, Agent, AgentThread]:
         """Get all agent dependencies for injection."""
-        if not all([self.agents_client, self.project_client, self.agent, self.thread, self.mcp_tools]):
+        if not all([self.agents_client, self.project_client, self.agent, self.thread]):
             raise RuntimeError("Agent not properly initialized")
 
         # Type cast to assure type checker that these are not None
@@ -152,13 +141,12 @@ class AgentManager:
             self.project_client,  # type: ignore
             self.agent,  # type: ignore
             self.thread,  # type: ignore
-            self.mcp_tools  # type: ignore
         )
 
     @property
     def is_initialized(self) -> bool:
         """Check if agent is properly initialized."""
-        return all([self.agents_client, self.project_client, self.agent, self.thread, self.mcp_tools])
+        return all([self.agents_client, self.project_client, self.agent, self.thread])
 
 
 # Application components

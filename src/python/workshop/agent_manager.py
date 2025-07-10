@@ -44,7 +44,7 @@ class AgentManager:
         with tracer.start_as_current_span(trace_scenario):
             print("Creating agent...")
             self.agent = await self.agents_client.create_agent(
-                model=Config.API_DEPLOYMENT_NAME,
+                model=Config.MODEL_DEPLOYMENT_NAME,
                 name=Config.AGENT_NAME,
                 instructions=instructions,
                 toolset=self.toolset,

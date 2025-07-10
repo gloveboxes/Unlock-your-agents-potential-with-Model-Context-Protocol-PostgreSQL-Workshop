@@ -21,3 +21,5 @@ appsettings.*.json
 src/workshop/[.][v]env/
 
 /src/shared/files
+DevTunnels/devtunnels-tokens-microsoft
+DevTunnels/devtunnels.json

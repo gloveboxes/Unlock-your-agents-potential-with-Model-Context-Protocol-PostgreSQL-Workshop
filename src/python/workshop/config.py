@@ -18,9 +18,10 @@ class Config:
     FONTS_ZIP = "fonts/fonts.zip"
     
     # Azure configuration - loaded from environment variables
-    API_DEPLOYMENT_NAME: Optional[str] = os.getenv("MODEL_DEPLOYMENT_NAME")
+    MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("MODEL_DEPLOYMENT_NAME")
     PROJECT_ENDPOINT: str = os.environ["PROJECT_ENDPOINT"]
     AZURE_BING_CONNECTION_ID: str = os.environ["AZURE_BING_CONNECTION_ID"]
+    DEV_TUNNEL_URL: Optional[str] = (url + "/mcp/" if (url := os.getenv("DEV_TUNNEL_URL")) else None)
     
     # Model parameters
     MAX_COMPLETION_TOKENS = 10240
@@ -44,7 +45,7 @@ class Config:
         if missing_vars:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
-        if not cls.API_DEPLOYMENT_NAME:
+        if not cls.MODEL_DEPLOYMENT_NAME:
             raise ValueError("MODEL_DEPLOYMENT_NAME environment variable is required")
     
     @classmethod
@@ -53,7 +54,7 @@ class Config:
         return f"""
 Configuration Summary:
 - Agent Name: {cls.AGENT_NAME}
-- Model Deployment: {cls.API_DEPLOYMENT_NAME or 'Not Set'}
+- Model Deployment: {cls.MODEL_DEPLOYMENT_NAME or 'Not Set'}
 - Temperature: {cls.TEMPERATURE}
 - Top P: {cls.TOP_P}
 - Max Completion Tokens: {cls.MAX_COMPLETION_TOKENS}

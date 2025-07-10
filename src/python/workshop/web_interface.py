@@ -8,7 +8,6 @@ from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import (
     Agent,
     AgentThread,
-    AsyncFunctionTool,
 )
 from azure.ai.projects.aio import AIProjectClient
 from config import Config
@@ -37,19 +36,17 @@ class WebInterface:
         self.project_client: AIProjectClient | None = None
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
-        self.mcp_tools: AsyncFunctionTool | None = None
         
         self._setup_routes()
         self._setup_static_files()
     
     def inject_dependencies(self, agents_client: AgentsClient, project_client: AIProjectClient, 
-                          agent: Agent, thread: AgentThread, mcp_tools: AsyncFunctionTool) -> None:
+                          agent: Agent, thread: AgentThread) -> None:
         """Inject the agent-related dependencies after initialization."""
         self.agents_client = agents_client
         self.project_client = project_client
         self.agent = agent
         self.thread = thread
-        self.mcp_tools = mcp_tools
     
     def _setup_static_files(self) -> None:
         """Setup static file serving."""
@@ -86,7 +83,7 @@ class WebInterface:
             # Extract text based on file type
             file_text = ""
             file_extension = (
-                file.filename.lower().split(".")[-1] if "." in file.filename else ""
+                file.filename.lower().split(".")[-1] if file.filename and "." in file.filename else ""
             )
 
             if file_extension in ["txt", "md"]:
@@ -155,6 +152,8 @@ class WebInterface:
         """Generate streaming response for chat."""
         try:
             # Create the web streaming event handler
+            if self.agents_client is None:
+                raise RuntimeError("AgentsClient is not initialized")
             web_handler = WebStreamEventHandler(
                 self.utilities, self.agents_client
             )
@@ -247,7 +246,7 @@ class WebInterface:
                             yield data
                         
                     except asyncio.TimeoutError:
-                        yield f"data: {json.dumps({'error': 'Response timeout after 20 seconds'})}\n\n"
+                        yield f"data: {json.dumps({'error': 'Response timeout after 60 seconds'})}\n\n"
                         break
             finally:
                 # Ensure the stream task is properly cleaned up
