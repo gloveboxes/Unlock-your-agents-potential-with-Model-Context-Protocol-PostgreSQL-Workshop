@@ -1,6 +1,6 @@
 aiohttp>=3.12.13,<4.0.0
 asyncpg>=0.30.0,<0.31.0
-azure-ai-agents==1.0.2
+azure-ai-agents==1.1.0b3
 azure-ai-projects==1.0.0b12
 azure-core-tracing-opentelemetry>=1.0.0b12, <2.0.0
 azure-identity>=1.23.0,<2.0.0

@@ -93,17 +93,32 @@ class AgentManager:
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
                 print("Creating agent...")
+                if not Config.API_DEPLOYMENT_NAME:
+                    raise ValueError(
+                        "Config.API_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
                     model=Config.API_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
-                    toolset=self.toolset,
+                    # toolset=self.toolset,
+                    tools=[
+                        {
+                            "type": "mcp",
+                                    "server_label": "github",
+                                    "server_url": "https://tp4cc3c9-8010.aue.devtunnels.ms/mcp/",
+                                    "require_approval": "never"
+                        },
+                        {
+                            "type": "code_interpreter",
+                        }
+                    ],
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
 
                 # Enable auto function calls
-                self.agents_client.enable_auto_function_calls(tools=self.toolset)
+                self.agents_client.enable_auto_function_calls(
+                    tools=self.toolset)
                 print("Enabled auto function calls.")
 
                 # Create thread
@@ -131,7 +146,14 @@ class AgentManager:
         if not all([self.agents_client, self.project_client, self.agent, self.thread, self.mcp_tools]):
             raise RuntimeError("Agent not properly initialized")
 
-        return self.agents_client, self.project_client, self.agent, self.thread, self.mcp_tools
+        # Type cast to assure type checker that these are not None
+        return (
+            self.agents_client,  # type: ignore
+            self.project_client,  # type: ignore
+            self.agent,  # type: ignore
+            self.thread,  # type: ignore
+            self.mcp_tools  # type: ignore
+        )
 
     @property
     def is_initialized(self) -> bool:
@@ -142,7 +164,7 @@ class AgentManager:
 # Application components
 agent_manager = AgentManager()
 utilities = Utilities()
-web_interface: WebInterface | None = None
+web_interface: WebInterface
 
 
 @asynccontextmanager
@@ -155,9 +177,11 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     success = await agent_manager.initialize(INSTRUCTIONS_FILE)
 
     if not success:
-        print(f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
+        print(
+            f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
     elif agent_manager.is_initialized:
-        print(f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
+        print(
+            f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
         web_interface.inject_dependencies(*agent_manager.get_dependencies())
 
     yield

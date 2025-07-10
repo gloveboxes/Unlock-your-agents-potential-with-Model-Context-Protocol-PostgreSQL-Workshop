@@ -25,16 +25,17 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
     """Manage application lifecycle with type-safe context"""
 
     db = PostgreSQLSchemaProvider()
-    await db.open_connection()
+    # Use connection pool instead of single connection for HTTP server
+    await db.create_pool()
 
     try:
         yield AppContext(db=db)
     finally:
         # Cleanup on shutdown
         try:
-            await db.close_connection()
+            await db.close_pool()
         except Exception as e:
-            print(f"⚠️  Error closing database: {e}")
+            print(f"⚠️  Error closing database pool: {e}")
 
 
 # Create MCP server with lifespan support
@@ -66,6 +67,7 @@ async def get_customers_table_schema() -> str:
     """Get the complete schema information for the customers table. **ALWAYS call this tool first** when queries involve customer data, customer information, or customer-related analysis. This provides table structure and column types.
     Note: Customers are independent entities with no direct store relationship - store information is tracked per order in the orders table. **CRITICAL**: ALWAYS include customer first_name and last_name in results - never return just customer_id as it is not human-readable.
     """
+    print("Retrieving customers table schema...")
     return await get_table_schema("customers")
 
 
@@ -74,6 +76,7 @@ async def get_products_table_schema() -> str:
     """Get the complete schema information for the products table. **ALWAYS call this tool first** when queries involve product data, product analysis, or product-related queries. This provides table structure with normalized category and type references.
     Note: Products contain a unique SKU field for business identification and reference category_id and type_id instead of storing text directly. **CRITICAL**: ALWAYS join with categories and product_types tables to return category_name and type_name - never return just IDs as they are not human-readable.
     """
+    print("Retrieving products table schema...")
     return await get_table_schema("products")
 
 
@@ -83,6 +86,7 @@ async def get_orders_table_schema() -> str:
 
     Note: This table contains order headers (order_id, customer_id, store_id, order_date). **CRITICAL**: ALWAYS join with customers table for customer names and stores table for store names - never return just customer_id or store_id as they are not human-readable. For product details and pricing, join with order_items table.
     """
+    print("Retrieving orders table schema...")
     return await get_table_schema("orders")
 
 
@@ -91,6 +95,7 @@ async def get_inventory_table_schema() -> str:
     """Get the complete schema information for the inventory table. **ALWAYS call this tool first** when queries involve inventory data, stock levels, or inventory-related analysis. This provides table structure showing stock levels for each product at each store location, column types, and relationships.
     Note: Inventory is tracked per store_id and product_id combination, allowing different stock levels at each store location. **CRITICAL**: ALWAYS join with stores table for store_name and products table (then categories/product_types) for product_name, category_name, type_name - never return just store_id or product_id as they are not human-readable.
     """
+    print("Retrieving inventory table schema...")
     return await get_table_schema("inventory")
 
 
@@ -100,6 +105,7 @@ async def get_stores_table_schema() -> str:
     Note: This table contains core store information (store_id, store_name, is_online). Store performance data comes from joining with orders table.
     **STORE TYPE IDENTIFICATION**: Use the is_online boolean flag to distinguish between online and physical stores. When is_online = true, the store is online; when is_online = false, the store is physical.
     """
+    print("Retrieving stores table schema...")
     return await get_table_schema("stores")
 
 
@@ -108,6 +114,7 @@ async def get_categories_table_schema() -> str:
     """Get the complete schema information for the categories table. **ALWAYS call this tool first** when queries involve product categories, category analysis, or category-related data. This provides the master category lookup table.
     Note: This is a lookup table containing category_id and category_name. Products reference this table via category_id.
     """
+    print("Retrieving categories table schema...")
     return await get_table_schema("categories")
 
 
@@ -115,6 +122,7 @@ async def get_categories_table_schema() -> str:
 async def get_product_types_table_schema() -> str:
     """Get the complete schema information for the product_types table. **ALWAYS call this tool first** when queries involve product types, subcategories, or product type analysis. This provides the product type lookup table linked to categories.
     Note: This table contains type_id, category_id, and type_name. It links product types to their parent categories."""
+    print("Retrieving product_types table schema...")
     return await get_table_schema("product_types")
 
 
@@ -123,6 +131,7 @@ async def get_order_items_table_schema() -> str:
     """Get the complete schema information for the order_items table. **ALWAYS call this tool first** when queries involve line item details, product quantities, pricing, discounts, or sales revenue analysis. This provides detailed information about products within orders.
     Note: This table contains the actual sales transactions with product_id, quantities, pricing, and totals. Each row represents one product within an order. **CRITICAL**: ALWAYS join with products table and then with categories/product_types tables to return product_name, category_name, and type_name - never return just product_id as it is not human-readable.
     """
+    print("Retrieving order_items table schema...")
     return await get_table_schema("order_items")
 
 
@@ -175,6 +184,7 @@ async def execute_sales_query(postgresql_query: str) -> str:
     Args:
         postgresql_query: A well-formed PostgreSQL query to extract sales data.
     """
+    print(f"Executing PostgreSQL query: {postgresql_query}")
     try:
         if not postgresql_query:
             return "Error: postgresql_query parameter is required"
@@ -211,6 +221,7 @@ if __name__ == "__main__":
     async def main() -> None:
         # Configure server settings
         mcp.settings.port = 8010
+        mcp.settings.stateless_http = True
         
         print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
         

@@ -19,6 +19,8 @@ from opentelemetry import trace
 from stream_event_handler import WebStreamEventHandler
 from utilities import Utilities
 
+RESPONSE_TIMEOUT_SECONDS= 60
+
 
 class WebInterface:
     """Handles all web interface functionality for the AI Agent Chat application."""
@@ -222,7 +224,7 @@ class WebInterface:
                 while True:
                     try:
                         # Wait for next token with timeout
-                        item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=20.0)
+                        item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=RESPONSE_TIMEOUT_SECONDS)
                         if item is None:  # End of stream signal
                             break
                         

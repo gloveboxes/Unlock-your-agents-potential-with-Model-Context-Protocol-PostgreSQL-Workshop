@@ -57,38 +57,69 @@ INVENTORY_TABLE = "inventory"
 class PostgreSQLSchemaProvider:
     """Provides PostgreSQL database schema information in AI-friendly formats for dynamic query generation."""
 
-    def __init__(self, postgres_config: Optional[Dict] = None):
+    def __init__(self, postgres_config: Optional[Dict] = None) -> None:
         self.postgres_config = postgres_config or POSTGRES_CONFIG
-        self.connection: Optional[asyncpg.Connection] = None
+        self.connection_pool: Optional[asyncpg.Pool] = None
         self.all_schemas: Optional[Dict[str, Dict[str, Any]]] = None
         self.schema_name = SCHEMA_NAME
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'PostgreSQLSchemaProvider':
         """Async context manager entry - just return self, don't auto-open connection."""
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Async context manager exit - close connection if it was opened."""
-        await self.close_connection()
+    async def __aexit__(self, exc_type: Optional[type], exc_val: Optional[Exception], exc_tb: Optional[object]) -> None:
+        """Async context manager exit - close connection pool if it was opened."""
+        await self.close_pool()
 
-    async def open_connection(self):
-        """Open PostgreSQL connection and preload schemas."""
-        if self.connection is None:
+    async def create_pool(self) -> None:
+        """Create connection pool for better resource management."""
+        if self.connection_pool is None:
             try:
-                self.connection = await asyncpg.connect(**self.postgres_config)
-                self.all_schemas = await self.get_all_schemas()
-                logger.info(f"✅ PostgreSQL connection opened: {self.postgres_config['host']}:{self.postgres_config['port']}/{self.postgres_config['database']}")
+                self.connection_pool = await asyncpg.create_pool(
+                    **self.postgres_config,
+                    min_size=1,  # Minimum connections in pool
+                    max_size=3,  # Very conservative pool size
+                    command_timeout=30,  # 30 second query timeout
+                    server_settings={
+                        'jit': 'off',  # Disable JIT to reduce memory usage
+                        'work_mem': '4MB',  # Limit work memory per query
+                        'statement_timeout': '30s'  # 30 second statement timeout
+                    }
+                )
+                # Don't preload schemas here to avoid connection exhaustion
+                logger.info(f"✅ PostgreSQL connection pool created: {self.postgres_config['host']}:{self.postgres_config['port']}/{self.postgres_config['database']}")
             except Exception as e:
-                logger.error(f"❌ Failed to connect to PostgreSQL: {e}")
+                logger.error(f"❌ Failed to create PostgreSQL pool: {e}")
                 raise
 
-    async def close_connection(self):
-        """Close PostgreSQL connection and cleanup."""
-        if self.connection:
-            await self.connection.close()
-            self.connection = None
+    async def ensure_schemas_loaded(self) -> None:
+        """Ensure schemas are loaded, loading them if not already cached."""
+        if self.all_schemas is None:
+            self.all_schemas = await self.get_all_schemas()
+
+    async def close_pool(self) -> None:
+        """Close connection pool and cleanup."""
+        if self.connection_pool:
+            await self.connection_pool.close()
+            self.connection_pool = None
             self.all_schemas = None
-            logger.info("✅ PostgreSQL connection closed")
+            logger.info("✅ PostgreSQL connection pool closed")
+
+    async def get_connection(self) -> asyncpg.Connection:
+        """Get a connection from pool."""
+        if not self.connection_pool:
+            raise RuntimeError("No database connection pool available. Call create_pool() first.")
+        
+        try:
+            return await self.connection_pool.acquire()
+        except Exception as e:
+            logger.error(f"Failed to acquire connection from pool: {e}")
+            raise RuntimeError(f"Connection pool exhausted or unavailable: {e}") from e
+
+    async def release_connection(self, conn: asyncpg.Connection) -> None:
+        """Release connection back to pool."""
+        if self.connection_pool:
+            await self.connection_pool.release(conn)
 
     def _get_qualified_table_name(self, table: str) -> str:
         """Get fully qualified table name with schema."""
@@ -96,46 +127,60 @@ class PostgreSQLSchemaProvider:
 
     async def table_exists(self, table: str) -> bool:
         """Check if a table exists in the retail schema."""
-        if not self.connection:
+        conn = None
+        try:
+            conn = await self.get_connection()
+            result = await conn.fetchval(
+                """SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = $1 AND table_name = $2
+                )""",
+                self.schema_name, table
+            )
+            return bool(result) if result is not None else False
+        except Exception:
             return False
-        
-        result = await self.connection.fetchval(
-            """SELECT EXISTS (
-                SELECT 1 FROM information_schema.tables 
-                WHERE table_schema = $1 AND table_name = $2
-            )""",
-            self.schema_name, table
-        )
-        return bool(result) if result is not None else False
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
     async def column_exists(self, table: str, column: str) -> bool:
         """Check if a column exists in the given table."""
-        if not self.connection:
+        conn = None
+        try:
+            conn = await self.get_connection()
+            result = await conn.fetchval(
+                """SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
+                )""",
+                self.schema_name, table, column
+            )
+            return bool(result) if result is not None else False
+        except Exception:
             return False
-        
-        result = await self.connection.fetchval(
-            """SELECT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
-            )""",
-            self.schema_name, table, column
-        )
-        return bool(result) if result is not None else False
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
     async def fetch_distinct_values(self, column: str, table: str) -> List[str]:
         """Return sorted list of distinct values for a given column in a table, after validation."""
-        if not self.connection:
-            raise ValueError("Database connection not established")
         if not await self.table_exists(table):
             raise ValueError(f"Table '{table}' does not exist in schema '{self.schema_name}'")
         if not await self.column_exists(table, column):
             raise ValueError(f"Column '{column}' does not exist in table '{self.schema_name}.{table}'")
 
-        qualified_table = self._get_qualified_table_name(table)
-        rows = await self.connection.fetch(
-            f"SELECT DISTINCT {column} FROM {qualified_table} WHERE {column} IS NOT NULL ORDER BY {column}"
-        )
-        return [row[0] for row in rows if row[0]]
+        conn = None
+        try:
+            conn = await self.get_connection()
+            qualified_table = self._get_qualified_table_name(table)
+            rows = await conn.fetch(
+                f"SELECT DISTINCT {column} FROM {qualified_table} WHERE {column} IS NOT NULL ORDER BY {column}"
+            )
+            return [row[0] for row in rows if row[0]]
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
     def infer_relationship_type(self, references_table: str) -> str:
         """Infer a relationship type based on the referenced table."""
@@ -147,152 +192,162 @@ class PostgreSQLSchemaProvider:
 
     async def get_table_schema(self, table_name: str) -> Dict[str, Any]:
         """Return schema information for a given table."""
-        if not self.connection:
-            return {"error": "Database connection not established"}
-
         if not await self.table_exists(table_name):
             return {"error": f"Table '{table_name}' not found in schema '{self.schema_name}'"}
 
-        # Get column information
-        columns = await self.connection.fetch(
-            """SELECT 
-                column_name,
-                data_type,
-                is_nullable,
-                column_default,
-                ordinal_position
-            FROM information_schema.columns 
-            WHERE table_schema = $1 AND table_name = $2
-            ORDER BY ordinal_position""",
-            self.schema_name, table_name
-        )
+        conn = None
+        try:
+            conn = await self.get_connection()
+            
+            # Get column information
+            columns = await conn.fetch(
+                """SELECT 
+                    column_name,
+                    data_type,
+                    is_nullable,
+                    column_default,
+                    ordinal_position
+                FROM information_schema.columns 
+                WHERE table_schema = $1 AND table_name = $2
+                ORDER BY ordinal_position""",
+                self.schema_name, table_name
+            )
 
-        # Get primary key information
-        primary_keys = await self.connection.fetch(
-            """SELECT kcu.column_name
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu 
-                ON tc.constraint_name = kcu.constraint_name
-                AND tc.table_schema = kcu.table_schema
-            WHERE tc.constraint_type = 'PRIMARY KEY'
-                AND tc.table_schema = $1 
-                AND tc.table_name = $2""",
-            self.schema_name, table_name
-        )
-        
-        pk_columns = set(row['column_name'] for row in primary_keys)
+            # Get primary key information
+            primary_keys = await conn.fetch(
+                """SELECT kcu.column_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu 
+                    ON tc.constraint_name = kcu.constraint_name
+                    AND tc.table_schema = kcu.table_schema
+                WHERE tc.constraint_type = 'PRIMARY KEY'
+                    AND tc.table_schema = $1 
+                    AND tc.table_name = $2""",
+                self.schema_name, table_name
+            )
+            
+            pk_columns = {row['column_name'] for row in primary_keys}
 
-        # Get foreign key information
-        foreign_keys = await self.connection.fetch(
-            """SELECT 
-                kcu.column_name,
-                ccu.table_name AS foreign_table_name,
-                ccu.column_name AS foreign_column_name
-            FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu 
-                ON tc.constraint_name = kcu.constraint_name
-                AND tc.table_schema = kcu.table_schema
-            JOIN information_schema.constraint_column_usage ccu 
-                ON ccu.constraint_name = tc.constraint_name
-                AND ccu.table_schema = tc.table_schema
-            WHERE tc.constraint_type = 'FOREIGN KEY'
-                AND tc.table_schema = $1 
-                AND tc.table_name = $2""",
-            self.schema_name, table_name
-        )
+            # Get foreign key information
+            foreign_keys = await conn.fetch(
+                """SELECT 
+                    kcu.column_name,
+                    ccu.table_name AS foreign_table_name,
+                    ccu.column_name AS foreign_column_name
+                FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu 
+                    ON tc.constraint_name = kcu.constraint_name
+                    AND tc.table_schema = kcu.table_schema
+                JOIN information_schema.constraint_column_usage ccu 
+                    ON ccu.constraint_name = tc.constraint_name
+                    AND ccu.table_schema = tc.table_schema
+                WHERE tc.constraint_type = 'FOREIGN KEY'
+                    AND tc.table_schema = $1 
+                    AND tc.table_name = $2""",
+                self.schema_name, table_name
+            )
 
-        columns_format = ", ".join(f"{col['column_name']}:{col['data_type']}" for col in columns)
-        lower_table = table_name.lower()
+            columns_format = ", ".join(f"{col['column_name']}:{col['data_type']}" for col in columns)
+            lower_table = table_name.lower()
 
-        # Define enum queries for each table to get unique values
-        enum_queries = {
-            STORES_TABLE: {
-                "available_stores": ("store_name", STORES_TABLE)
-            },
-            CATEGORIES_TABLE: {
-                "available_categories": ("category_name", CATEGORIES_TABLE)
-            },
-            PRODUCT_TYPES_TABLE: {
-                "available_product_types": ("type_name", PRODUCT_TYPES_TABLE)
-            },
-            PRODUCTS_TABLE: {
-                # Removed available_product_names to avoid lengthy output
-            },
-            ORDERS_TABLE: {
-                "available_years": ("EXTRACT(YEAR FROM order_date)::text", ORDERS_TABLE)
-            },
-            ORDER_ITEMS_TABLE: {
-                # "price_range": ("unit_price", ORDER_ITEMS_TABLE)
+            # Define enum queries for each table to get unique values
+            enum_queries = {
+                STORES_TABLE: {
+                    "available_stores": ("store_name", STORES_TABLE)
+                },
+                CATEGORIES_TABLE: {
+                    "available_categories": ("category_name", CATEGORIES_TABLE)
+                },
+                PRODUCT_TYPES_TABLE: {
+                    "available_product_types": ("type_name", PRODUCT_TYPES_TABLE)
+                },
+                PRODUCTS_TABLE: {
+                    # Removed available_product_names to avoid lengthy output
+                },
+                ORDERS_TABLE: {
+                    "available_years": ("EXTRACT(YEAR FROM order_date)::text", ORDERS_TABLE)
+                },
+                ORDER_ITEMS_TABLE: {
+                    # "price_range": ("unit_price", ORDER_ITEMS_TABLE)
+                }
             }
-        }
 
-        enum_data = {}
-        if lower_table in enum_queries:
-            for key, (column, table) in enum_queries[lower_table].items():
-                try:
-                    if key == "price_range":
-                        # For price range, get min and max values
-                        qualified_table = self._get_qualified_table_name(table)
-                        result = await self.connection.fetchrow(
-                            f"SELECT MIN({column}) as min_price, MAX({column}) as max_price FROM {qualified_table}"
-                        )
-                        if result and result['min_price'] is not None:
-                            enum_data[key] = f"${result['min_price']:.2f} - ${result['max_price']:.2f}"
-                    elif key == "available_years":
-                        # Handle years specially
-                        qualified_table = self._get_qualified_table_name(table)
-                        rows = await self.connection.fetch(
-                            f"SELECT DISTINCT {column} as year FROM {qualified_table} WHERE order_date IS NOT NULL ORDER BY year"
-                        )
-                        years = [str(row['year']) for row in rows if row['year']]
-                        enum_data[key] = years
-                    else:
-                        enum_data[key] = await self.fetch_distinct_values(column, table)
-                except Exception as e:
-                    logger.debug(f"Failed to fetch {key} for {table}: {e}")
-                    enum_data[key] = []
+            enum_data = {}
+            if lower_table in enum_queries:
+                for key, (column, table) in enum_queries[lower_table].items():
+                    try:
+                        if key == "price_range":
+                            # For price range, get min and max values
+                            qualified_table = self._get_qualified_table_name(table)
+                            result = await conn.fetchrow(
+                                f"SELECT MIN({column}) as min_price, MAX({column}) as max_price FROM {qualified_table}"
+                            )
+                            if result and result['min_price'] is not None:
+                                enum_data[key] = f"${result['min_price']:.2f} - ${result['max_price']:.2f}"
+                        elif key == "available_years":
+                            # Handle years specially
+                            qualified_table = self._get_qualified_table_name(table)
+                            rows = await conn.fetch(
+                                f"SELECT DISTINCT {column} as year FROM {qualified_table} WHERE order_date IS NOT NULL ORDER BY year"
+                            )
+                            years = [str(row['year']) for row in rows if row['year']]
+                            enum_data[key] = years
+                        else:
+                            enum_data[key] = await self.fetch_distinct_values(column, table)
+                    except Exception as e:
+                        logger.debug(f"Failed to fetch {key} for {table}: {e}")
+                        enum_data[key] = []
 
-        schema_data = {
-            "table_name": table_name,
-            "description": f"Table containing {table_name} data",
-            "columns_format": columns_format,
-            "columns": [
-                {
-                    "name": col['column_name'],
-                    "type": col['data_type'],
-                    "primary_key": col['column_name'] in pk_columns,
-                    "required": col['is_nullable'] == 'NO',
-                    "default_value": col['column_default'],
-                }
-                for col in columns
-            ],
-            "foreign_keys": [
-                {
-                    "column": fk['column_name'],
-                    "references_table": fk['foreign_table_name'],
-                    "references_column": fk['foreign_column_name'],
-                    "description": f"{fk['column_name']} links to {fk['foreign_table_name']}.{fk['foreign_column_name']}",
-                    "relationship_type": self.infer_relationship_type(fk['foreign_table_name']),
-                }
-                for fk in foreign_keys
-            ],
-        }
+            schema_data = {
+                "table_name": table_name,
+                "description": f"Table containing {table_name} data",
+                "columns_format": columns_format,
+                "columns": [
+                    {
+                        "name": col['column_name'],
+                        "type": col['data_type'],
+                        "primary_key": col['column_name'] in pk_columns,
+                        "required": col['is_nullable'] == 'NO',
+                        "default_value": col['column_default'],
+                    }
+                    for col in columns
+                ],
+                "foreign_keys": [
+                    {
+                        "column": fk['column_name'],
+                        "references_table": fk['foreign_table_name'],
+                        "references_column": fk['foreign_column_name'],
+                        "description": f"{fk['column_name']} links to {fk['foreign_table_name']}.{fk['foreign_column_name']}",
+                        "relationship_type": self.infer_relationship_type(fk['foreign_table_name']),
+                    }
+                    for fk in foreign_keys
+                ],
+            }
 
-        schema_data.update(enum_data)
-        return schema_data
+            schema_data.update(enum_data)
+            return schema_data
+            
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
     async def get_all_table_names(self) -> List[str]:
         """Get all user-defined table names in the retail schema."""
-        if not self.connection:
+        conn = None
+        try:
+            conn = await self.get_connection()
+            rows = await conn.fetch(
+                """SELECT table_name FROM information_schema.tables 
+                   WHERE table_schema = $1 AND table_type = 'BASE TABLE'
+                   ORDER BY table_name""",
+                self.schema_name
+            )
+            return [row['table_name'] for row in rows]
+        except Exception:
             return []
-        
-        rows = await self.connection.fetch(
-            """SELECT table_name FROM information_schema.tables 
-               WHERE table_schema = $1 AND table_type = 'BASE TABLE'
-               ORDER BY table_name""",
-            self.schema_name
-        )
-        return [row['table_name'] for row in rows]
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
     async def get_all_schemas(self) -> Dict[str, Dict[str, Any]]:
         """Get schema metadata for all tables."""
@@ -356,6 +411,7 @@ class PostgreSQLSchemaProvider:
 
     async def get_table_metadata_string(self, table_name: str) -> str:
         """Return formatted schema metadata string for a single table."""
+        await self.ensure_schemas_loaded()
         if self.all_schemas and table_name in self.all_schemas:
             return self.format_schema_metadata_for_ai(self.all_schemas[table_name])
         schema = await self.get_table_schema(table_name)
@@ -363,13 +419,12 @@ class PostgreSQLSchemaProvider:
 
     async def execute_query(self, sql_query: str) -> str:
         """Execute a SQL query and return results in LLM-friendly JSON format."""
-        if not self.connection:
-            return json.dumps({"error": "Database connection not established"})
-
-        # logger.info(f"\n🔍 Executing PostgreSQL query: {sql_query}\n")
-
+        conn = None
         try:
-            rows = await self.connection.fetch(sql_query)
+            conn = await self.get_connection()
+            
+            # logger.info(f"\n🔍 Executing PostgreSQL query: {sql_query}\n")
+            rows = await conn.fetch(sql_query)
             
             if not rows:
                 return json.dumps({
@@ -398,13 +453,19 @@ class PostgreSQLSchemaProvider:
                 "row_count": 0,
                 "columns": []
             })
+        finally:
+            if conn:
+                await self.release_connection(conn)
 
 
 async def test_connection() -> bool:
     """Test PostgreSQL connection and return success status."""
     try:
-        conn = await asyncpg.connect(**POSTGRES_CONFIG)
-        await conn.close()
+        # Create a temporary pool for testing
+        pool = await asyncpg.create_pool(**POSTGRES_CONFIG, min_size=1, max_size=1)
+        conn = await pool.acquire()
+        await pool.release(conn)
+        await pool.close()
         return True
     except Exception as e:
         logger.error(f"Connection test failed: {e}")
@@ -428,8 +489,11 @@ async def main() -> None:
 
     try:
         async with PostgreSQLSchemaProvider() as provider:
-            # Explicitly open the database connection when needed
-            await provider.open_connection()
+            # Create connection pool (schemas will be loaded lazily when needed)
+            await provider.create_pool()
+            
+            # Preload schemas for testing
+            await provider.ensure_schemas_loaded()
             
             logger.info(f"\n📋 Getting all table schemas from {SCHEMA_NAME} schema...")
             if not provider.all_schemas:
