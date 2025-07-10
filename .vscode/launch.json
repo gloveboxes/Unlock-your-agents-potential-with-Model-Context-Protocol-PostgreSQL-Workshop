@@ -1,8 +1,18 @@
 {
     "version": "0.2.0",
+    "compounds": [
+        {
+            "name": "Debug: MCP Server + Workshop App",
+            "configurations": [
+                "Debug: MCP Sales Server",
+                "Debug: Workshop Sales Assistant"
+            ],
+            "stopAll": true
+        }
+    ],
     "configurations": [
         {
-            "name": "Python: Sales Assistant",
+            "name": "Debug: Workshop Sales Assistant",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/python/workshop/app.py",
@@ -11,17 +21,19 @@
             "env": {
                 "PYDEVD_DISABLE_FILE_VALIDATION": "1"
             },
-            "justMyCode": false
+            "justMyCode": true
         },
         {
-            "name": "Attach to Python",
-            "type": "python",
-            "request": "attach",
-            "connect": {
-                "host": "localhost",
-                "port": 5679
+            "name": "Debug: MCP Sales Server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/python/mcp/mcp_server.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {
+                "PYDEVD_DISABLE_FILE_VALIDATION": "1"
             },
-            "justMyCode": false
+            "justMyCode": true
         }
     ]
 }
