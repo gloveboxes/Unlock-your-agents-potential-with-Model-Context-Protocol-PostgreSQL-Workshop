@@ -41,7 +41,7 @@ BACKUP_FILE_NEW="/docker-entrypoint-initdb.d/backups/zava_retail_2025_07_14_post
 
 echo "🔍 Checking for backup files..."
 echo "📁 Contents of backup directory:"
-ls -la /docker-entrypoint-initdb.d/backups/ || echo "Backup directory not found"
+ls -la /docker-entrypoint-initdb.d/ || echo "Backup directory not found"
 
 # Check file permissions and existence
 if [ -d "/docker-entrypoint-initdb.d/backups" ]; then
