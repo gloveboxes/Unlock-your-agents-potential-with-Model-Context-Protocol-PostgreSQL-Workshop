@@ -24,7 +24,7 @@ class Config:
     DEV_TUNNEL_URL: Optional[str] = (url + "/mcp/" if (url := os.getenv("DEV_TUNNEL_URL")) else None)
     
     # Model parameters
-    MAX_COMPLETION_TOKENS = 10240
+    MAX_COMPLETION_TOKENS = 20480
     MAX_PROMPT_TOKENS = 20480
     
     # The LLM is used to generate the SQL queries.
