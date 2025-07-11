@@ -20,7 +20,6 @@ class Config:
     # Azure configuration - loaded from environment variables
     MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("MODEL_DEPLOYMENT_NAME")
     PROJECT_ENDPOINT: str = os.environ["PROJECT_ENDPOINT"]
-    AZURE_BING_CONNECTION_ID: str = os.environ["AZURE_BING_CONNECTION_ID"]
     DEV_TUNNEL_URL: Optional[str] = (url + "/mcp/" if (url := os.getenv("DEV_TUNNEL_URL")) else None)
     
     # Model parameters
@@ -37,7 +36,6 @@ class Config:
         """Validate that all required environment variables are set."""
         required_vars = {
             "PROJECT_ENDPOINT": cls.PROJECT_ENDPOINT,
-            "AZURE_BING_CONNECTION_ID": cls.AZURE_BING_CONNECTION_ID,
         }
         
         missing_vars = [var for var, value in required_vars.items() if not value]
