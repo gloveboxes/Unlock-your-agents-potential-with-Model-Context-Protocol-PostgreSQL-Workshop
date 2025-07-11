@@ -116,6 +116,7 @@ async def execute_sales_query(postgresql_query: str) -> str:
 
     Workflow:
     1. **ALWAYS** first call get_multiple_table_schemas() for any tables whose schemas you have not yet obtained.
+    1. Call get_current_utc_date() to get the current date/time in UTC for date-based queries.
     2. Compose your SQL using the exact table and column names from those schemas.
     3. Pass the SQL to this tool to execute it.
 
@@ -153,6 +154,7 @@ async def get_current_utc_date() -> str:
     Returns:
         Current UTC date and time in ISO format (YYYY-MM-DDTHH:MM:SS.fffffZ)
     """
+    print("Retrieving current UTC date and time")
     try:
         current_utc = datetime.now(timezone.utc)
         return f"Current UTC Date/Time: {current_utc.isoformat()}"
