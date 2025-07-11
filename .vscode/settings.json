@@ -5,5 +5,8 @@
                 "github.copilot-chat/gpt-4.1"
             ]
         }
-    }
+    },
+    "python.analysis.extraPaths": [
+        "./src/python/workshop"
+    ]
 }
