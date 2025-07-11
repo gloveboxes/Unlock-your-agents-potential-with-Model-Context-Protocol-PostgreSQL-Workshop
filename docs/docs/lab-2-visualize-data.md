@@ -10,7 +10,12 @@ In this lab, you will:
 
 ## Introduction
 
-The Foundry Agent Service Code Interpreter enables the LLM to safely execute Python code for tasks such as creating charts or performing complex data analyses based on user queries. It uses natural language processing (NLP), sales data from a PostgreSQL database accessed through MCP (Model Context Protocol), and user prompts to automate code generation. The LLM-generated Python code executes within a secure sandbox environment, running on a restricted subset of Python to ensure safe and controlled execution.
+The Model Context Protocol (MCP) is a standard interface that connects Large Language Models (LLMs) to external tools and data sources—such as databases and APIs—enabling smarter, more extensible AI applications.
+
+In this lab, you will:
+
+- Connect the MCP Server to the Azure AI Found Agent Service, allowing the agent to interact with sales data in a PostgreSQL database.
+- Enable the Agent Service Code Interpreter, which lets the agent generate and execute Python code based on user queries and data from the MCP Server, providing advanced data analysis and visualization capabilities.
 
 ## Lab Exercise
 
@@ -60,7 +65,6 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
 
     TBD
 
-
 ## Run the Agent App
 
 1. Press <kbd>F5</kbd> to run the app.
@@ -69,8 +73,6 @@ In this lab, you'll enable the Code Interpreter to execute Python code generated
 ### Start a Conversation with the Agent
 
 **Show the top 10 products by revenue by store**
-
-
 
 Try this question:
 
