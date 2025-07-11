@@ -4,7 +4,7 @@ Monitoring is essential for ensuring the availability, performance, and reliabil
 
 ## Lab Exercise
 
-**THESE INSTRUCTIONS ARE NOT COMPLETE AND NEED TO BE FINISHED**
+<!-- **THESE INSTRUCTIONS ARE NOT COMPLETE AND NEED TO BE FINISHED**
 
 1. Open the `monitoring.py` file.
 
@@ -12,4 +12,4 @@ Monitoring is essential for ensuring the availability, performance, and reliabil
 
 3. Implement custom alerts for any critical metrics that require immediate attention.
 
-4. Test the monitoring setup by simulating various scenarios and verifying that alerts are triggered as expected.
+4. Test the monitoring setup by simulating various scenarios and verifying that alerts are triggered as expected. -->

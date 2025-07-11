@@ -137,15 +137,15 @@ Next, we log in to Azure AI Foundry to retrieve the project endpoint, which the 
     3. Paste the **Project endpoint** you copied from Azure AI Foundry into the `.env` file.
 
         ```python
-        PROJECT_CONNECTION_STRING="<your_project_endpoint>"
+        PROJECT_ENDPOINT="<your_project_endpoint>"
         ```
 
         Your `.env` file should look similar to this but with your project endpoint.
 
         ```python
-        MODEL_DEPLOYMENT_NAME="gpt-4o"
-        AZURE_BING_CONNECTION_ID="/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.CognitiveServices/accounts/<ai_account>/projects/<project_name>/connections/groundingwithbingsearch"
-        PROJECT_CONNECTION_STRING="<your_project_endpoint>"
+        PROJECT_ENDPOINT="<your_project_endpoint>"
+        MODEL_DEPLOYMENT_NAME="<your_model_deployment_name>"
+        DEV_TUNNEL_URL="<your_dev_tunnel_url>"
         ```
 
     4. Save the `.env` file.

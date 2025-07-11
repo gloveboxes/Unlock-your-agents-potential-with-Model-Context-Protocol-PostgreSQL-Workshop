@@ -9,7 +9,7 @@ nav:
   # - Workshop Setup:
   #   - BUILD Attendees: introduction-event.md
   #   - Self-Guided Learners: introduction-self-guided.md
-  - Lab 1 Start the MCP DevTunnel: lab-0-start-mcp-server.md
+  - Lab 1 Start the MCP Dev Tunnel: lab-1-start-mcp-server.md
   # - Lab 1 Grounding LLMs with MCP: lab-1-mcp_intro.md
   - Lab 2 Ground your Agent with MCP Services: lab-2-visualize-data.md
   - Lab 3 Extending the MCP Service: lab-3-mcp-time-service.md
