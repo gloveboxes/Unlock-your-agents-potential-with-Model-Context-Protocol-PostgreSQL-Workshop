@@ -355,7 +355,7 @@ class PostgreSQLSchemaProvider:
                         "references_table": fk['foreign_table_name'],
                         "references_column": fk['foreign_column_name'],
                         "description": f"{fk['column_name']} links to {fk['foreign_table_name']}.{fk['foreign_column_name']}",
-                        "relationship_type": self.infer_relationship_type(fk['foreign_table_name']),
+                        "relationship_type": self.infer_relationship_type(f"{schema_name}.{fk['foreign_table_name']}"),
                     }
                     for fk in foreign_keys
                 ],
