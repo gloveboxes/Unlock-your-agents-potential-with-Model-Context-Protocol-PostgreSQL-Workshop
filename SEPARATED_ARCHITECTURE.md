@@ -7,9 +7,9 @@ This project has been refactored to separate the web interface from the agent se
 ```
 ┌─────────────────┐    HTTP/REST API    ┌─────────────────┐    HTTP/Dev Tunnel    ┌─────────────────┐
 │   Web App       │ ──────────────────► │  Agent Service  │ ────────────────────► │   MCP Server    │
-│ src/python/     │                     │ src/python/     │                       │ src/python/mcp/ │
-│ web_app/        │                     │ workshop/       │                       │  (port 8010)    │
-│ (port 8005)     │                     │ (port 8006)     │                       │                 │
+│ src/python/     │                     │ src/python/     │                       │  src/python/    │
+│ web_app/        │                     │ workshop/       │                       │  mcp_server/    │
+│ (port 8005)     │                     │ (port 8006)     │                       │  (port 8010)    │
 │                 │                     │                 │                       │                 │
 │ - User Interface│                     │ - Azure AI      │                       │ - PostgreSQL    │
 │ - File Upload   │                     │   Agent         │                       │   Integration   │
