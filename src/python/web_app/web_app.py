@@ -10,8 +10,12 @@ Web interface available at: http://127.0.0.1:8005
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import AsyncGenerator, Dict, List
+
+# Add workshop folder to path to import shared modules
+sys.path.append(str(Path(__file__).parent.parent / "workshop"))
 
 import httpx
 from config import Config

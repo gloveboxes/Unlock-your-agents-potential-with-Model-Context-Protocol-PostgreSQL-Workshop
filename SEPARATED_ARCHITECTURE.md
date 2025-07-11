@@ -30,6 +30,7 @@ This project has been refactored to separate the web interface from the agent se
   - Handles file uploads
   - Proxies chat requests to Agent Service
   - Converts agent service responses to web-compatible format
+  - **Imports shared modules from workshop folder** (config, utilities)
 
 ### 2. Agent Service (`src/python/workshop/agent_service.py`)
 
@@ -41,6 +42,7 @@ This project has been refactored to separate the web interface from the agent se
   - Streaming chat responses
   - Telemetry and monitoring
   - File serving from agent-generated content
+  - **Shared modules** (config, utilities, stream_event_handler)
 
 ### 3. MCP Server (`src/python/mcp/mcp_server.py`)
 
@@ -105,6 +107,8 @@ Run the test script to verify all services are running:
 4. **Deployment**: Can deploy services to different containers/servers
 5. **Testing**: Can test agent service independently via REST API
 6. **Monitoring**: Separate health checks and metrics for each service
+7. **Code Reuse**: Web app imports shared modules from workshop (no duplication)
+8. **Maintainability**: Single source of truth for configuration and utilities
 
 ## Legacy Support
 
