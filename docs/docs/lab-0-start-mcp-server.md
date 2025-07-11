@@ -4,13 +4,12 @@
 
 In this lab, you will:
 
-- Understand how to start and configure the MCP server
-- Learn about the MCP server's role in handling communication between LLMs and external tools
-- Set up the foundation for the Model Context Protocol implementation
+- Use DevTunnel to make your local MCP server accessible to cloud-based agent services
+- Set up your environment for hands-on experimentation with the Model Context Protocol
 
 ## Introduction
 
-The Model Context Protocol (MCP) server is a crucial component that handles the communication between Large Language Models (LLMs) and external tools and data sources. Before you can interact with the agent and use MCP tools, you need to start this server.
+The Model Context Protocol (MCP) server is a crucial component that handles the communication between Large Language Models (LLMs) and external tools and data sources. You’ll run the MCP server on your local machine, but the Azure AI Foundry Agent Service requires internet access to connect to it. To make your local MCP server accessible from the internet, you’ll use a DevTunnel. This allows the Agent Service to communicate with your MCP server as if it were running as a service in Azure.
 
 ## Interface options for MCP
 
@@ -25,8 +24,6 @@ This lab uses the Streamable HTTP transport interface to integrate with the Azur
     Normally, you'd deploy the MCP server in a production environment, but for this workshop, you'll run it locally in your development environment. This allows you to test and interact with the MCP tools without needing a full deployment.
 
 ### Start up a DevTunnel for the MCP Server
-
-You’ll run the MCP server on your local machine, but the Agent Service requires internet access to connect to it. To make your local MCP server accessible from the internet, you’ll use a DevTunnel. This allows the Agent Service to communicate with your MCP server as if it were running as a service in Azure.
 
 1. In a new terminal, authenticate DevTunnel. You'll be prompted to log in with your Azure account, use the same account you used to log in to the Azure AI Foundry Agent Service or Azure Portal. Run the following command:
 
@@ -52,4 +49,4 @@ You’ll run the MCP server on your local machine, but the Agent Service require
 
 ## Next Steps
 
-Once the Dev Tunnel is running, you can proceed to the next lab where you'll configure the agent to use MCP tools and start interacting with the system.
+Once the Dev Tunnel is running, you can proceed to the next lab where you'll configure the agent to use MCP Server and start interacting with the system.
