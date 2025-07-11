@@ -4,7 +4,7 @@ This project has been refactored to separate the web interface from the agent se
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────┐    HTTP/REST API    ┌─────────────────┐    HTTP/Dev Tunnel    ┌─────────────────┐
 │   Web App       │ ──────────────────► │  Agent Service  │ ────────────────────► │   MCP Server    │
 │ src/python/     │                     │ src/python/     │                       │  src/python/    │
@@ -56,11 +56,13 @@ This project has been refactored to separate the web interface from the agent se
 ## Running the Services
 
 ### Option 1: Using VS Code Debug (Recommended)
+
 1. Press `F5` in VS Code
 2. Select "Debug: MCP Server + Agent Service + Web App"
 3. All three services will start automatically
 
 ### Option 2: Manual Start
+
 Start each service in separate terminals:
 
 ```bash
@@ -78,11 +80,13 @@ python web_app.py
 ```
 
 ### Option 3: VS Code Tasks
+
 Use the VS Code task runner:
+
 1. `Ctrl+Shift+P` → "Tasks: Run Task"
 2. Select the desired task:
    - "Run MCP Server"
-   - "Run Agent Service" 
+   - "Run Agent Service"
    - "Run Web App"
 
 ## Testing the Setup
@@ -95,9 +99,9 @@ Run the test script to verify all services are running:
 
 ## URLs
 
-- **Web Interface**: http://127.0.0.1:8005
-- **Agent Service Health**: http://127.0.0.1:8006/health
-- **Web App Health**: http://127.0.0.1:8005/health
+- **Web Interface**: <http://127.0.0.1:8005>
+- **Agent Service Health**: <http://127.0.0.1:8006/health>
+- **Web App Health**: <http://127.0.0.1:8005/health>
 
 ## Benefits of This Architecture
 
