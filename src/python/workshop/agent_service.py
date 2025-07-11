@@ -10,7 +10,6 @@ REST API available at: http://127.0.0.1:8006
 
 import asyncio
 import contextlib
-import json
 import logging
 import traceback
 from contextlib import asynccontextmanager
