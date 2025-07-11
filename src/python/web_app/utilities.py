@@ -15,6 +15,7 @@ class Utilities:
     def shared_files_path(self) -> Path:
         """Get the path to the shared files directory."""
         return Path(__file__).parent.parent.parent.resolve() / "shared"
+    
 
     @staticmethod
     def suppress_logs() -> None:
@@ -41,10 +42,9 @@ class Utilities:
             print("\n🔧 To fix this issue, please run the following command:")
             print(f"{tc.CYAN}Azure CLI:{tc.RESET}")
             print("   az login --use-device-code")
-            print(
-                f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
+            print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
             raise e
-
+        
     @property
     def get_credential(self) -> DefaultAzureCredential:
         """Get the Azure credential."""
@@ -90,21 +90,21 @@ class Utilities:
                 file.write(chunk)
 
         self.log_msg_green(f"File saved to {file_path}")
-
+        
         # Return file information for web display
         return {
             "file_id": file_id,
             "file_name": file_name,
             "file_path": str(file_path),
             "relative_path": f"/files/{file_name}",
-            "is_image": file_extension.lower() in [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"],
-            "attachment_name": attachment_name,
+            "is_image": file_extension.lower() in ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'],
+            "attachment_name": attachment_name
         }
 
     async def get_files(self, message: ThreadMessage, agents_client: AgentsClient) -> List[dict]:
         """Get the image files from the message and kickoff download. Returns list of file info."""
         downloaded_files = []
-
+        
         if message.image_contents:
             for index, image in enumerate(message.image_contents, start=0):
                 attachment_name = (
@@ -117,13 +117,12 @@ class Utilities:
         elif message.attachments:
             for index, attachment in enumerate(message.attachments, start=0):
                 attachment_name = (
-                    "unknown" if not message.file_path_annotations else message.file_path_annotations[
-                        index].text
+                    "unknown" if not message.file_path_annotations else message.file_path_annotations[index].text
                 )
                 if attachment.file_id:
                     file_info = await self.get_file(agents_client, attachment.file_id, attachment_name)
                     downloaded_files.append(file_info)
-
+        
         return downloaded_files
 
     async def upload_file(self, agents_client: AgentsClient, file_path: Path, purpose: str = "assistants"):  # type: ignore
@@ -133,8 +132,7 @@ class Utilities:
         self.log_msg_purple(f"File uploaded with ID: {file_info.id}")
         return file_info
 
-    # type: ignore
-    async def create_vector_store(self, agents_client: AgentsClient, files: List[str], vector_store_name: str):
+    async def create_vector_store(self, agents_client: AgentsClient, files: List[str], vector_store_name: str):  # type: ignore
         """Upload a file to the project."""
 
         file_ids = []
@@ -154,24 +152,28 @@ class Utilities:
         self.log_msg_purple("Vector store created and files added.")
         return vector_store
 
-    async def cleanup_agent_resources(
-        self, agent: Optional[Agent], thread: Optional[AgentThread], agents_client_instance: Optional[AgentsClient]
-    ) -> None:
+    async def cleanup_agent_resources(self, agent: Optional[Agent], thread: Optional[AgentThread], agents_client_instance: Optional[AgentsClient]) -> None:
         """Cleanup the Azure AI resources."""
+        from mcp_client import cleanup_global_mcp_client
+        
+        # Cleanup MCP client first
+        await cleanup_global_mcp_client()
+        
+        # Then cleanup Azure AI resources
         if agent and thread and agents_client_instance:
             try:
                 # Clean up files
                 existing_files = await agents_client_instance.files.list()
                 for f in existing_files.data:
                     await agents_client_instance.files.delete(f.id)
-
+                
                 # Clean up thread
                 await agents_client_instance.threads.delete(thread.id)
-
+                
                 # Clean up agent
                 await agents_client_instance.delete_agent(agent.id)
-
+                
                 self.log_msg_green("✅ Agent resources cleaned up successfully")
-
+                
             except Exception as e:
                 print(f"⚠️  Warning: Error during Azure cleanup: {e}")

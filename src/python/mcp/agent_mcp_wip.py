@@ -3,7 +3,15 @@ import os
 import time
 
 from azure.ai.agents import AgentsClient
-from azure.ai.agents.models import ListSortOrder, MessageTextContent
+from azure.ai.agents.models import (
+    Agent,
+    AgentThread,
+    AsyncFunctionTool,
+    AsyncToolSet,
+    CodeInterpreterTool,
+    ListSortOrder,
+    MessageTextContent,
+)
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 
@@ -24,8 +32,11 @@ with project_client:
             {
                 "type": "mcp",
     "server_label": "github",
-                "server_url": "https://1wc4231c-8010.aue.devtunnels.ms",
+                "server_url": "https://tp4cc3c9-8010.aue.devtunnels.ms/mcp/",
                 "require_approval": "never"
+            },
+            {
+                "type": "code_interpreter",
             }
         ],
         tool_resources=None

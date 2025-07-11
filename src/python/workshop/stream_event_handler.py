@@ -62,6 +62,6 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
         """Handle stream completion."""
         pass
 
-    async def on_unhandled_event(self, event_type: str, _event_data: object) -> None:
+    async def on_unhandled_event(self, event_type: str, event_data: object) -> None:
         """Handle unhandled events."""
         print(f"Unhandled Event Type: {event_type}")
