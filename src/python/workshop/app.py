@@ -98,7 +98,7 @@ class AgentManager:
                     tools=[
                         {
                             "type": "mcp",
-                                    "server_label": "github",
+                                    "server_label": "ZavaMcpServer",
                                     "server_url": Config.DEV_TUNNEL_URL,
                                     "require_approval": "never"
                         },
