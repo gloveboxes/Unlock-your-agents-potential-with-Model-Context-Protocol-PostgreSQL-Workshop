@@ -18,7 +18,6 @@ from typing import AsyncGenerator, Dict, List
 sys.path.append(str(Path(__file__).parent.parent / "workshop"))
 
 import httpx
-from config import Config
 from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
