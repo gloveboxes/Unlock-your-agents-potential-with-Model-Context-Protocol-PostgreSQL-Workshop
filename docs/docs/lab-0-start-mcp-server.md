@@ -1,5 +1,3 @@
-# Lab 0: Start MCP Server
-
 ## What You'll Learn
 
 In this lab, you will:
