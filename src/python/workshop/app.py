@@ -23,11 +23,11 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, cast
 
-from agent_service import ChatRequest, ChatStreamingService
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
+from chat_service import ChatRequest, ChatStreamingService
 from config import Config
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
