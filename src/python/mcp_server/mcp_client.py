@@ -62,7 +62,7 @@ class MCPClient:
                     await context.__aexit__(None, None, None)
                 except Exception as e:
                     logging.warning(f"Error closing MCP {name}: {e}")
-        
+
         self._session = None
         self._client_context = None
 
@@ -70,7 +70,7 @@ class MCPClient:
         """Extract text content from MCP result."""
         if not result.content:
             return "No result returned from tool"
-        
+
         content_item = result.content[0]
         return content_item.text if hasattr(content_item, "text") else str(content_item)
 
@@ -123,14 +123,14 @@ class MCPClient:
     async def build_function_tools(self) -> AsyncFunctionTool:
         """Fetch tool schemas from MCP Server and build function tools."""
         print("🔧 Fetching tools from MCP server...")
-        
+
         tools = await self.fetch_tools_async()
         if not tools:
             print("⚠️  No tools found from MCP server")
             return AsyncFunctionTool(set())
 
         print(f"✅ Found {len(tools)} tools from MCP server")
-        
+
         # Create specific tool functions with proper parameter signatures
         functions_set = set()
         for tool in tools:
@@ -138,36 +138,43 @@ class MCPClient:
             tool_name = function_info["name"]
             tool_description = function_info["description"]
             tool_parameters = function_info.get("parameters", {})
-            
+
             # Create specific functions based on tool name to maintain correct signatures
             if tool_name == "execute_sales_query":
+
                 async def execute_sales_query(postgresql_query: str) -> str:
                     return await self.call_tool_async("execute_sales_query", {"postgresql_query": postgresql_query})
+
                 execute_sales_query.__name__ = tool_name
                 execute_sales_query.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
                 functions_set.add(execute_sales_query)
-                
+
             elif tool_name == "get_multiple_table_schemas":
+
                 async def get_multiple_table_schemas(table_names: List[str]) -> str:
                     return await self.call_tool_async("get_multiple_table_schemas", {"table_names": table_names})
+
                 get_multiple_table_schemas.__name__ = tool_name
                 get_multiple_table_schemas.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
                 functions_set.add(get_multiple_table_schemas)
-                
+
             elif tool_name == "get_current_utc_date":
+
                 async def get_current_utc_date() -> str:
                     return await self.call_tool_async("get_current_utc_date", {})
+
                 get_current_utc_date.__name__ = tool_name
                 get_current_utc_date.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
                 functions_set.add(get_current_utc_date)
-                
+
             else:
                 # Fallback for any other tools - use closure to capture tool_name
                 def make_generic_tool(captured_tool_name: str) -> Callable:
                     async def generic_tool(**kwargs: dict) -> str:  # type: ignore
                         return await self.call_tool_async(captured_tool_name, kwargs)
+
                     return generic_tool
-                    
+
                 generic_func = make_generic_tool(tool_name)
                 generic_func.__name__ = tool_name
                 generic_func.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
@@ -175,11 +182,12 @@ class MCPClient:
 
         tool_names = [tool["function"]["name"] for tool in tools]
         print(f"📋 Available MCP tools: {', '.join(tool_names)}")
-        
+
         return AsyncFunctionTool(functions_set)
 
 
 if __name__ == "__main__":
+
     async def test() -> None:
         client = MCPClient.create_default()
         async with client:
