@@ -47,6 +47,7 @@ RESPONSE_TIMEOUT_SECONDS = 60
 
 trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
+mcp_client = MCPClient.create_default()
 
 
 # Pydantic models for API
@@ -67,15 +68,10 @@ class AgentManager:
 
     async def _setup_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
-        # Create MCP client and build tools
-        mcp_client = MCPClient.create_default()
-        async with mcp_client:
-            mcp_tools = await mcp_client.build_function_tools()
-            self.toolset.add(mcp_tools)
-        
-        # Store the client for potential future use
-        self.mcp_client = mcp_client
-        
+
+        mcp_tools = await mcp_client.build_function_tools()
+        self.toolset.add(mcp_tools)
+
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
         self.toolset.add(code_interpreter)
@@ -87,7 +83,6 @@ class AgentManager:
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
-        self.mcp_client: MCPClient | None = None
 
     async def initialize(self, instructions_file: str) -> bool:
         """Initialize the agent with tools and instructions."""
@@ -146,7 +141,8 @@ class AgentManager:
                 print(f"Created agent, ID: {self.agent.id}")
 
                 # Enable auto function calls
-                self.agents_client.enable_auto_function_calls(tools=self.toolset)
+                self.agents_client.enable_auto_function_calls(
+                    tools=self.toolset)
                 print("Enabled auto function calls.")
 
                 # Create thread
@@ -162,14 +158,8 @@ class AgentManager:
 
     async def cleanup(self) -> None:
         """Clean up agent resources."""
-        # Clean up MCP client first
-        if self.mcp_client:
-            try:
-                await self.mcp_client.close_session()
-                print("MCP client cleaned up.")
-            except Exception as e:
-                print(f"Warning: Error during MCP client cleanup: {e}")
-        
+        await mcp_client.close_session()
+
         # Clean up agent resources
         if self.agent and self.thread and self.agents_client:
             try:
@@ -203,9 +193,9 @@ class AgentService:
             return
 
         # Type guards - ensure all required components are available
-        if (not self.agent_manager.agents_client or 
-            not self.agent_manager.agent or 
-            not self.agent_manager.thread):
+        if (not self.agent_manager.agents_client or
+            not self.agent_manager.agent or
+                not self.agent_manager.thread):
             yield ChatResponse(error="Agent components not properly initialized")
             return
 
@@ -215,7 +205,8 @@ class AgentService:
             self.chat_sessions[session_id] = []
 
         # Add user message to session
-        self.chat_sessions[session_id].append({"role": "user", "content": request.message})
+        self.chat_sessions[session_id].append(
+            {"role": "user", "content": request.message})
 
         try:
             # Create the web streaming event handler
@@ -224,9 +215,10 @@ class AgentService:
             )
 
             # Create a span for this chat request
-            message_preview = request.message[:50] + "..." if len(request.message) > 50 else request.message
+            message_preview = request.message[:50] + \
+                "..." if len(request.message) > 50 else request.message
             span_name = f"Zava Agent Chat Request: {message_preview}"
-            
+
             with tracer.start_as_current_span(span_name) as span:
                 # Add some attributes to the span for better observability
                 span.set_attribute("user_message_length", len(request.message))
@@ -235,7 +227,7 @@ class AgentService:
                 span.set_attribute("operation_type", "chat_request")
                 span.set_attribute("agent_id", self.agent_manager.agent.id)
                 span.set_attribute("thread_id", self.agent_manager.thread.id)
-                
+
                 # Create message in thread
                 with tracer.start_as_current_span("create_user_message") as message_span:
                     await self.agent_manager.agents_client.messages.create(
@@ -243,17 +235,19 @@ class AgentService:
                         role="user",
                         content=request.message,
                     )
-                    message_span.set_attribute("thread_id", self.agent_manager.thread.id)
+                    message_span.set_attribute(
+                        "thread_id", self.agent_manager.thread.id)
 
                 # Start the agent stream
                 with tracer.start_as_current_span("agent_stream_processing") as stream_span:
                     # Start the stream in a background task
                     async def run_stream() -> None:
                         # Capture references with type casts since we've already checked they're not None
-                        agents_client = cast(AgentsClient, self.agent_manager.agents_client)
+                        agents_client = cast(
+                            AgentsClient, self.agent_manager.agents_client)
                         agent = cast(Agent, self.agent_manager.agent)
                         thread = cast(AgentThread, self.agent_manager.thread)
-                        
+
                         try:
                             async with await agents_client.runs.stream(
                                 thread_id=thread.id,
@@ -267,7 +261,8 @@ class AgentService:
                             ) as stream:
                                 await stream.until_done()
                             stream_span.set_attribute("agent_id", agent.id)
-                            stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
+                            stream_span.set_attribute(
+                                "max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
                         except Exception as e:
                             print(f"❌ Error in agent stream: {e}")
                             traceback.print_exc()
@@ -280,7 +275,7 @@ class AgentService:
                         finally:
                             # Signal end of stream
                             await web_handler.token_queue.put(None)
-                    
+
                     # Start the stream task
                     stream_task = asyncio.create_task(run_stream())
 
@@ -292,7 +287,7 @@ class AgentService:
                         item = await asyncio.wait_for(web_handler.token_queue.get(), timeout=RESPONSE_TIMEOUT_SECONDS)
                         if item is None:  # End of stream signal
                             break
-                        
+
                         # Yield response based on type
                         if isinstance(item, dict):
                             if item.get("type") == "text":
@@ -304,7 +299,7 @@ class AgentService:
                         else:
                             # Backwards compatibility for plain text
                             yield ChatResponse(content=str(item))
-                        
+
                     except asyncio.TimeoutError:
                         yield ChatResponse(error="Response timeout after 60 seconds")
                         break
@@ -318,7 +313,7 @@ class AgentService:
             # Add complete message to session
             if web_handler.assistant_message:
                 self.chat_sessions[session_id].append({
-                    "role": "assistant", 
+                    "role": "assistant",
                     "content": web_handler.assistant_message
                 })
 
@@ -343,9 +338,11 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     success = await agent_service.agent_manager.initialize(INSTRUCTIONS_FILE)
 
     if not success:
-        print(f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
+        print(
+            f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
     elif agent_service.agent_manager.is_initialized and agent_service.agent_manager.agent:
-        print(f"✅ Agent initialized successfully with ID: {agent_service.agent_manager.agent.id}")
+        print(
+            f"✅ Agent initialized successfully with ID: {agent_service.agent_manager.agent.id}")
 
     yield
 
@@ -361,7 +358,7 @@ app = FastAPI(title="Azure AI Agent Service", lifespan=lifespan)
 async def health_check() -> Dict[str, Any]:
     """Health check endpoint."""
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "agent_initialized": agent_service.agent_manager.is_initialized,
         "agent_id": agent_service.agent_manager.agent.id if agent_service.agent_manager.agent else None
     }
@@ -370,11 +367,11 @@ async def health_check() -> Dict[str, Any]:
 @app.post("/chat/stream")
 async def stream_chat(request: ChatRequest) -> StreamingResponse:
     """Stream chat responses."""
-    
+
     async def generate_stream() -> AsyncGenerator[str, None]:
         async for response in agent_service.process_chat_message(request):
             yield f"data: {response.model_dump_json()}\n\n"
-    
+
     return StreamingResponse(
         generate_stream(),
         media_type="text/event-stream",
@@ -393,16 +390,16 @@ async def serve_file(filename: str) -> FileResponse:
     """Serve files from the shared files directory."""
     files_dir = Path(agent_service.utilities.shared_files_path) / "files"
     file_path = files_dir / filename
-    
+
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
-    
+
     # Security check: ensure the file is within the files directory
     try:
         file_path.resolve().relative_to(files_dir.resolve())
     except ValueError as exc:
         raise HTTPException(status_code=403, detail="Access denied") from exc
-    
+
     return FileResponse(path=str(file_path))
 
 
