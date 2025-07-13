@@ -30,12 +30,12 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
             self.assistant_message += delta.text
             # Put token in queue for web streaming
             await self.token_queue.put({"type": "text", "content": delta.text})
-    
+
     async def on_thread_message(self, message: ThreadMessage) -> None:
         """Override to capture files and send them to web interface."""
         # Get files and store their information
         files = await self.util.get_files(message, self.agents_client)
-        
+
         # Send file information to web interface
         if files:
             for file_info in files:

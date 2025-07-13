@@ -41,8 +41,7 @@ class Utilities:
             print("\n🔧 To fix this issue, please run the following command:")
             print(f"{tc.CYAN}Azure CLI:{tc.RESET}")
             print("   az login --use-device-code")
-            print(
-                f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
+            print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
             raise e
 
     @property
@@ -117,8 +116,7 @@ class Utilities:
         elif message.attachments:
             for index, attachment in enumerate(message.attachments, start=0):
                 attachment_name = (
-                    "unknown" if not message.file_path_annotations else message.file_path_annotations[
-                        index].text
+                    "unknown" if not message.file_path_annotations else message.file_path_annotations[index].text
                 )
                 if attachment.file_id:
                     file_info = await self.get_file(agents_client, attachment.file_id, attachment_name)
