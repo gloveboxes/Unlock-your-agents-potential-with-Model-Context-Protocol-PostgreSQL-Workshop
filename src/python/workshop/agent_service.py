@@ -32,7 +32,7 @@ from utilities import Utilities
 
 # Add the mcp_server directory to the path
 sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
-from mcp_client import fetch_and_build_mcp_tools
+from mcp_client import MCPClient  # type: ignore
 
 # Configure logging - suppress verbose Azure SDK logs
 logger = logging.getLogger(__name__)
@@ -67,14 +67,18 @@ class AgentManager:
 
     async def _setup_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
-        # Add MCP tools
-        mcp_tools = await fetch_and_build_mcp_tools()
-        self.toolset.add(mcp_tools)
+        # Create MCP client and build tools
+        mcp_client = MCPClient.create_default()
+        async with mcp_client:
+            mcp_tools = await mcp_client.build_function_tools()
+            self.toolset.add(mcp_tools)
+        
+        # Store the client for potential future use
+        self.mcp_client = mcp_client
         
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
         self.toolset.add(code_interpreter)
-        print(self.toolset.definitions)
 
     def __init__(self) -> None:
         self.utilities = Utilities()
@@ -83,6 +87,7 @@ class AgentManager:
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
+        self.mcp_client: MCPClient | None = None
 
     async def initialize(self, instructions_file: str) -> bool:
         """Initialize the agent with tools and instructions."""
@@ -157,6 +162,15 @@ class AgentManager:
 
     async def cleanup(self) -> None:
         """Clean up agent resources."""
+        # Clean up MCP client first
+        if self.mcp_client:
+            try:
+                await self.mcp_client.close_session()
+                print("MCP client cleaned up.")
+            except Exception as e:
+                print(f"Warning: Error during MCP client cleanup: {e}")
+        
+        # Clean up agent resources
         if self.agent and self.thread and self.agents_client:
             try:
                 await self.utilities.cleanup_agent_resources(self.agent, self.thread, self.agents_client)
