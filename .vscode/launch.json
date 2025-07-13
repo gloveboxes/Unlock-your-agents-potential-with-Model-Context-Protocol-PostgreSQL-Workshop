@@ -23,6 +23,7 @@
                 "PYDEVD_DISABLE_FILE_VALIDATION": "1"
             },
             "justMyCode": true
+            "justMyCode": false
         },
         {
             "name": "Debug: Web App",

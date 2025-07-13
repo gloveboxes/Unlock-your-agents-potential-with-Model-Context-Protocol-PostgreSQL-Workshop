@@ -11,6 +11,7 @@ REST API available at: http://127.0.0.1:8006
 import asyncio
 import contextlib
 import logging
+import sys
 import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -28,6 +29,10 @@ from pydantic import BaseModel
 from stream_event_handler import WebStreamEventHandler
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
+
+# Add the mcp_server directory to the path
+sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
+from mcp_client import fetch_and_build_mcp_tools
 
 # Configure logging - suppress verbose Azure SDK logs
 logger = logging.getLogger(__name__)
@@ -62,9 +67,14 @@ class AgentManager:
 
     async def _setup_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
+        # Add MCP tools
+        mcp_tools = await fetch_and_build_mcp_tools()
+        self.toolset.add(mcp_tools)
+        
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
         self.toolset.add(code_interpreter)
+        print(self.toolset.definitions)
 
     def __init__(self) -> None:
         self.utilities = Utilities()
@@ -114,20 +124,25 @@ class AgentManager:
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
-                    tools=[
-                        {
-                            "type": "mcp",
-                            "server_label": "ZavaMcpServer",
-                            "server_url": Config.DEV_TUNNEL_URL,
-                            "require_approval": "never"
-                        },
-                        {
-                            "type": "code_interpreter",
-                        }
-                    ],
+                    toolset=self.toolset,
+                    # tools=[
+                    #     {
+                    #         "type": "mcp",
+                    #         "server_label": "ZavaMcpServer",
+                    #         "server_url": Config.DEV_TUNNEL_URL,
+                    #         "require_approval": "never"
+                    #     },
+                    #     {
+                    #         "type": "code_interpreter",
+                    #     }
+                    # ],
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
+
+                # Enable auto function calls
+                self.agents_client.enable_auto_function_calls(tools=self.toolset)
+                print("Enabled auto function calls.")
 
                 # Create thread
                 print("Creating thread...")

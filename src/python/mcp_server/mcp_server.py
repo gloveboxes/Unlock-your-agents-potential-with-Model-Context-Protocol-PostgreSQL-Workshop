@@ -3,12 +3,16 @@
 Provides comprehensive customer sales database access with individual table schema tools for Zava Retail DIY Business.
 """
 
+import argparse
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Annotated
 
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 from sales_data_postgres import PostgreSQLSchemaProvider
 
 
@@ -62,24 +66,16 @@ async def get_table_schema(table_name: str) -> str:
         return f"Error retrieving {table_name} table schema: {e!s}"
 
 
-@mcp.tool()
-async def get_multiple_table_schemas(table_names: list[str]) -> str:
-    """Retrieve schemas for multiple tables in one call.
-
-    Use this tool only for schemas you have not already fetched during the conversation; supply a list of valid table names.
-    
-    Valid table names include:
-    - retail.customers
-    - retail.stores
-    - retail.categories
-    - retail.product_types
-    - retail.products
-    - retail.orders
-    - retail.order_items
-    - retail.inventory
+@mcp.tool(description="Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'.",
+          name="get_multiple_table_schemas")
+async def get_multiple_table_schemas(
+    table_names: Annotated[list[str], Field(description='List of table names. Valid table names include "retail.customers", "retail.stores", "retail.categories", "retail.product_types", "retail.products", "retail.orders", "retail.order_items", "retail.inventory".')]
+) -> str:
+    """
+    Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'.
 
     Args:
-        table_names: List of table names (e.g., ["retail.customers", "retail.stores"]).
+        table_names: List of table names.
 
     Returns:
         Concatenated schema strings for the requested tables.
@@ -112,18 +108,7 @@ async def get_multiple_table_schemas(table_names: list[str]) -> str:
 
 @mcp.tool()
 async def execute_sales_query(postgresql_query: str) -> str:
-    """Run a PostgreSQL query against the sales database.
-
-    Workflow:
-    1. **ALWAYS** first call get_multiple_table_schemas() for any tables whose schemas you have not yet obtained.
-    1. Call get_current_utc_date() to get the current date/time in UTC for date-based queries.
-    2. Compose your SQL using the exact table and column names from those schemas.
-    3. Pass the SQL to this tool to execute it.
-
-    Guidelines for readable output:
-    - Join related tables to include descriptive fields (customer names, product names, store names, category names, etc.).
-    - Distinguish online vs physical stores using the is_online flag (`CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type`).
-    - Prefer aggregated results (SUM, AVG, COUNT, GROUP BY) unless the user explicitly requests raw rows.
+    """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven’t yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY.
 
     Args:
         postgresql_query: A well‑formed PostgreSQL query.
@@ -146,9 +131,7 @@ async def execute_sales_query(postgresql_query: str) -> str:
 
 @mcp.tool()
 async def get_current_utc_date() -> str:
-    """Get the current UTC date and time in ISO format.
-
-    Returns the current date and time in UTC timezone, useful for date-based queries,
+    """Get the current UTC date and time in ISO format. Useful for date-based queries,
     filtering recent data, or understanding the current context for time-sensitive analysis.
 
     Returns:
@@ -162,20 +145,31 @@ async def get_current_utc_date() -> str:
         return f"Error retrieving current UTC date: {e!s}"
 
 
+async def run_http_server() -> None:
+    """Run the MCP server in HTTP mode."""
+    # Configure server settings
+    mcp.settings.port = 8010
+    # mcp.settings.stateless_http = True
+
+    print(
+        f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
+
+    # Run the FastMCP server as HTTP endpoint
+    await mcp.run_streamable_http_async()
+
+
+def main() -> None:
+    """Main entry point for the MCP server."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--stdio', action='store_true', help='Run server in stdio mode')
+    args = parser.parse_args()
+
+    if args.stdio:
+        mcp.run()
+    else:
+        # Run the HTTP server
+        asyncio.run(run_http_server())
+
+
 if __name__ == "__main__":
-    import asyncio
-
-    # For HTTP server mode, run using asyncio
-    async def main() -> None:
-        # Configure server settings
-        mcp.settings.port = 8010
-        # mcp.settings.stateless_http = True
-
-        print(
-            f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
-
-        # Run the FastMCP server as HTTP endpoint
-        await mcp.run_streamable_http_async()
-
-    # Run the HTTP server
-    asyncio.run(main())
+    main()
