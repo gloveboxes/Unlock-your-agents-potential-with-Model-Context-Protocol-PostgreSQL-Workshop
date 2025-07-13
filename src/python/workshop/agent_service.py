@@ -8,13 +8,18 @@ To run: python agent_service.py
 REST API available at: http://127.0.0.1:8006
 """
 
+import sys
+from pathlib import Path
+
+# Add the mcp_server directory to the path
+sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
+
 import asyncio
 import contextlib
 import logging
 import sys
 import traceback
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, cast
 
 from azure.ai.agents.aio import AgentsClient
@@ -24,15 +29,12 @@ from azure.monitor.opentelemetry import configure_azure_monitor
 from config import Config
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+from mcp_client import MCPClient  # type: ignore
 from opentelemetry import trace
 from pydantic import BaseModel
 from stream_event_handler import WebStreamEventHandler
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
-
-# Add the mcp_server directory to the path
-sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
-from mcp_client import MCPClient  # type: ignore
 
 # Configure logging - suppress verbose Azure SDK logs
 logger = logging.getLogger(__name__)
@@ -48,6 +50,13 @@ RESPONSE_TIMEOUT_SECONDS = 60
 trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
 mcp_client = MCPClient.create_default()
+
+tools = [
+    {"type": "mcp", "server_label": "ZavaMcpServer", "server_url": Config.DEV_TUNNEL_URL, "require_approval": "never"},
+    {
+        "type": "code_interpreter",
+    },
+]
 
 
 # Pydantic models for API
@@ -118,32 +127,23 @@ class AgentManager:
                 # Create agent
                 print("Creating agent...")
                 if not Config.MODEL_DEPLOYMENT_NAME:
-                    raise ValueError(
-                        "Config.MODEL_DEPLOYMENT_NAME must not be None")
+                    raise ValueError("Config.MODEL_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
                     toolset=self.toolset,
-                    # tools=[
-                    #     {
-                    #         "type": "mcp",
-                    #         "server_label": "ZavaMcpServer",
-                    #         "server_url": Config.DEV_TUNNEL_URL,
-                    #         "require_approval": "never"
-                    #     },
-                    #     {
-                    #         "type": "code_interpreter",
-                    #     }
-                    # ],
+                    # tools=tools,
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
 
                 # Enable auto function calls
-                self.agents_client.enable_auto_function_calls(
-                    tools=self.toolset)
-                print("Enabled auto function calls.")
+                try:
+                    self.agents_client.enable_auto_function_calls(tools=self.toolset)
+                    print("Enabled auto function calls.")
+                except Exception as e:
+                    pass  # Ignore as there may be no tools
 
                 # Create thread
                 print("Creating thread...")
@@ -193,9 +193,7 @@ class AgentService:
             return
 
         # Type guards - ensure all required components are available
-        if (not self.agent_manager.agents_client or
-            not self.agent_manager.agent or
-                not self.agent_manager.thread):
+        if not self.agent_manager.agents_client or not self.agent_manager.agent or not self.agent_manager.thread:
             yield ChatResponse(error="Agent components not properly initialized")
             return
 
@@ -205,18 +203,14 @@ class AgentService:
             self.chat_sessions[session_id] = []
 
         # Add user message to session
-        self.chat_sessions[session_id].append(
-            {"role": "user", "content": request.message})
+        self.chat_sessions[session_id].append({"role": "user", "content": request.message})
 
         try:
             # Create the web streaming event handler
-            web_handler = WebStreamEventHandler(
-                self.utilities, self.agent_manager.agents_client
-            )
+            web_handler = WebStreamEventHandler(self.utilities, self.agent_manager.agents_client)
 
             # Create a span for this chat request
-            message_preview = request.message[:50] + \
-                "..." if len(request.message) > 50 else request.message
+            message_preview = request.message[:50] + "..." if len(request.message) > 50 else request.message
             span_name = f"Zava Agent Chat Request: {message_preview}"
 
             with tracer.start_as_current_span(span_name) as span:
@@ -235,16 +229,14 @@ class AgentService:
                         role="user",
                         content=request.message,
                     )
-                    message_span.set_attribute(
-                        "thread_id", self.agent_manager.thread.id)
+                    message_span.set_attribute("thread_id", self.agent_manager.thread.id)
 
                 # Start the agent stream
                 with tracer.start_as_current_span("agent_stream_processing") as stream_span:
                     # Start the stream in a background task
                     async def run_stream() -> None:
                         # Capture references with type casts since we've already checked they're not None
-                        agents_client = cast(
-                            AgentsClient, self.agent_manager.agents_client)
+                        agents_client = cast(AgentsClient, self.agent_manager.agents_client)
                         agent = cast(Agent, self.agent_manager.agent)
                         thread = cast(AgentThread, self.agent_manager.thread)
 
@@ -261,8 +253,7 @@ class AgentService:
                             ) as stream:
                                 await stream.until_done()
                             stream_span.set_attribute("agent_id", agent.id)
-                            stream_span.set_attribute(
-                                "max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
+                            stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
                         except Exception as e:
                             print(f"❌ Error in agent stream: {e}")
                             traceback.print_exc()
@@ -312,10 +303,7 @@ class AgentService:
 
             # Add complete message to session
             if web_handler.assistant_message:
-                self.chat_sessions[session_id].append({
-                    "role": "assistant",
-                    "content": web_handler.assistant_message
-                })
+                self.chat_sessions[session_id].append({"role": "assistant", "content": web_handler.assistant_message})
 
             # Send completion signal
             yield ChatResponse(done=True)
@@ -338,11 +326,9 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     success = await agent_service.agent_manager.initialize(INSTRUCTIONS_FILE)
 
     if not success:
-        print(
-            f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
+        print(f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
     elif agent_service.agent_manager.is_initialized and agent_service.agent_manager.agent:
-        print(
-            f"✅ Agent initialized successfully with ID: {agent_service.agent_manager.agent.id}")
+        print(f"✅ Agent initialized successfully with ID: {agent_service.agent_manager.agent.id}")
 
     yield
 
@@ -360,7 +346,7 @@ async def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "agent_initialized": agent_service.agent_manager.is_initialized,
-        "agent_id": agent_service.agent_manager.agent.id if agent_service.agent_manager.agent else None
+        "agent_id": agent_service.agent_manager.agent.id if agent_service.agent_manager.agent else None,
     }
 
 
@@ -380,7 +366,7 @@ async def stream_chat(request: ChatRequest) -> StreamingResponse:
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
             "Access-Control-Allow-Origin": "*",
-            "Content-Encoding": "identity"
+            "Content-Encoding": "identity",
         },
     )
 

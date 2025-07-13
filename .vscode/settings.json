@@ -18,5 +18,10 @@
             "label": "Agent Service",
             "onAutoForward": "silent"
         }
+        ,
+        "8010": {
+            "label": "Agent Service",
+            "onAutoForward": "silent"
+        }
     }
 }
