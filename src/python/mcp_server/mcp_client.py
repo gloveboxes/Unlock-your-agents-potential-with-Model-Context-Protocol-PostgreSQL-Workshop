@@ -7,7 +7,7 @@ import inspect
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from azure.ai.agents.models import AsyncFunctionTool
 from mcp import ClientSession, StdioServerParameters
@@ -178,6 +178,51 @@ async def fetch_mcp_tools_async() -> List[Dict[str, Any]]:
     return await client.fetch_tools_async()
 
 
+# Tool function factories for creating MCP tool wrappers
+def make_execute_sales_query(tool_name: str) -> Callable:
+    """Factory for execute_sales_query tool function."""
+    async def execute_sales_query_func(postgresql_query: str) -> str:
+        try:
+            return await call_mcp_tool_async(tool_name, postgresql_query=postgresql_query)
+        except Exception as e:
+            return f"Error executing {tool_name}: {e}"
+    return execute_sales_query_func
+
+def make_get_multiple_table_schemas(tool_name: str) -> Callable:
+    """Factory for get_multiple_table_schemas tool function."""
+    async def get_multiple_table_schemas_func(table_names: List[str]) -> str:
+        try:
+            return await call_mcp_tool_async(tool_name, table_names=table_names)
+        except Exception as e:
+            return f"Error executing {tool_name}: {e}"
+    return get_multiple_table_schemas_func
+
+def make_get_current_utc_date(tool_name: str) -> Callable:
+    """Factory for get_current_utc_date tool function."""
+    async def get_current_utc_date_func() -> str:
+        try:
+            return await call_mcp_tool_async(tool_name)
+        except Exception as e:
+            return f"Error executing {tool_name}: {e}"
+    return get_current_utc_date_func
+
+def make_fallback(tool_name: str) -> Callable:
+    """Factory for fallback tool function."""
+    async def fallback_func() -> str:
+        try:
+            return await call_mcp_tool_async(tool_name)
+        except Exception as e:
+            return f"Error executing {tool_name}: {e}"
+    return fallback_func
+
+# Function map for tool creation
+TOOL_FACTORIES = {
+    "execute_sales_query": make_execute_sales_query,
+    "get_multiple_table_schemas": make_get_multiple_table_schemas,
+    "get_current_utc_date": make_get_current_utc_date,
+}
+
+
 async def fetch_and_build_mcp_tools() -> AsyncFunctionTool:
     """Fetch tool schemas from MCP Server and build function tools."""
     print("🔧 Fetching tools from MCP server...")
@@ -188,52 +233,22 @@ async def fetch_and_build_mcp_tools() -> AsyncFunctionTool:
 
         if not tools:
             print("⚠️  No tools found from MCP server")
-            return set()
+            return AsyncFunctionTool(set())
 
         print(f"✅ Found {len(tools)} tools from MCP server")
 
         # Build a function for each tool with proper metadata
         # Note: Azure AI Agent Service requires explicit parameter signatures, 
         # not **kwargs, so we need specific implementations for each tool
-        def make_tool_func(tool_schema: dict):
+        def make_tool_func(tool_schema: dict) -> Callable:
             tool_name = tool_schema["function"]["name"]
             tool_description = tool_schema["function"]["description"]
             tool_params = tool_schema["function"]["parameters"]
             print(tool_schema)
             
             # Create function with explicit parameters based on the tool schema
-            if tool_name == "execute_sales_query":
-                async def execute_sales_query_func(postgresql_query: str) -> str:
-                    try:
-                        return await call_mcp_tool_async(tool_name, postgresql_query=postgresql_query)
-                    except Exception as e:
-                        return f"Error executing {tool_name}: {e}"
-                tool_func = execute_sales_query_func
-                        
-            elif tool_name == "get_multiple_table_schemas":
-                async def get_multiple_table_schemas_func(table_names: List[str]) -> str:
-                    try:
-                        return await call_mcp_tool_async(tool_name, table_names=table_names)
-                    except Exception as e:
-                        return f"Error executing {tool_name}: {e}"
-                tool_func = get_multiple_table_schemas_func
-                        
-            elif tool_name == "get_current_utc_date":
-                async def get_current_utc_date_func() -> str:
-                    try:
-                        return await call_mcp_tool_async(tool_name)
-                    except Exception as e:
-                        return f"Error executing {tool_name}: {e}"
-                tool_func = get_current_utc_date_func
-            else:
-                # Fallback for any new tools - basic implementation
-                # New tools will need to be added above with their specific signatures
-                async def fallback_func() -> str:
-                    try:
-                        return await call_mcp_tool_async(tool_name)
-                    except Exception as e:
-                        return f"Error executing {tool_name}: {e}"
-                tool_func = fallback_func
+            factory = TOOL_FACTORIES.get(tool_name, make_fallback)
+            tool_func = factory(tool_name)
 
             # Set function metadata for Azure AI Agent Service
             tool_func.__name__ = tool_name
