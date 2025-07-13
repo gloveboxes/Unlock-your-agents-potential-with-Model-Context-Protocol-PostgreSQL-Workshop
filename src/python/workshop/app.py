@@ -23,7 +23,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, cast
 
-from agent_service import AgentService, ChatRequest
+from agent_service import ChatRequest, ChatStreamingService
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool
 from azure.ai.projects.aio import AIProjectClient
@@ -162,7 +162,7 @@ class AgentManager:
 
 # Global service instance
 agent_manager = AgentManager()
-agent_service = AgentService(agent_manager)
+agent_service = ChatStreamingService(agent_manager)
 
 
 @asynccontextmanager
