@@ -26,10 +26,11 @@ RESPONSE_TIMEOUT_SECONDS = 60
 
 class AgentManagerProtocol(Protocol):
     """Protocol for AgentManager to avoid circular imports."""
+
     agents_client: AgentsClient | None
     agent: Agent | None
     thread: AgentThread | None
-    
+
     @property
     def is_initialized(self) -> bool: ...
 
