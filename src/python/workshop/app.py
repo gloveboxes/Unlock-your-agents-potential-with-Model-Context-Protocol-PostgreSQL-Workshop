@@ -14,14 +14,11 @@ from pathlib import Path
 # Add the mcp_server directory to the path
 sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
 
-import asyncio
-import contextlib
 import logging
 import sys
-import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional, cast
+from typing import Any, AsyncGenerator, Dict
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool
@@ -33,7 +30,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from mcp_client import MCPClient  # type: ignore
 from opentelemetry import trace
-from stream_event_handler import WebStreamEventHandler
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 
