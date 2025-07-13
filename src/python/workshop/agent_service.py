@@ -215,8 +215,6 @@ class AgentService:
 
             with tracer.start_as_current_span(span_name) as span:
                 # Add some attributes to the span for better observability
-                span.set_attribute("user_message_length", len(request.message))
-                span.set_attribute("session_id", session_id)
                 span.set_attribute("user_message", request.message)
                 span.set_attribute("operation_type", "chat_request")
                 span.set_attribute("agent_id", self.agent_manager.agent.id)
