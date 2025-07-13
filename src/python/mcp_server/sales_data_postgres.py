@@ -33,14 +33,14 @@ logger = logging.getLogger(__name__)
 
 # PostgreSQL connection configuration
 POSTGRES_CONFIG = {
-    'host': os.getenv('postgres_host', 'db'),
-    'port': int(os.getenv('postgres_port', '5432')),
-    'user': os.getenv('postgres_user', 'postgres'),
-    'password': os.getenv('postgres_password', 'P@ssw0rd!'),
-    'database': os.getenv('postgres_db', 'zava')
+    "host": os.getenv("postgres_host", "db"),
+    "port": int(os.getenv("postgres_port", "5432")),
+    "user": os.getenv("postgres_user", "postgres"),
+    "password": os.getenv("postgres_password", "P@ssw0rd!"),
+    "database": os.getenv("postgres_db", "zava"),
 }
 
-SCHEMA_NAME = 'retail'
+SCHEMA_NAME = "retail"
 
 # Constants - table names without schema prefix (will be added in queries)
 CUSTOMERS_TABLE = "customers"
@@ -63,7 +63,7 @@ class PostgreSQLSchemaProvider:
         # In‑memory cache for per‑table schema look‑ups
         self._schema_cache: Dict[str, Any] = {}
 
-    async def __aenter__(self) -> 'PostgreSQLSchemaProvider':
+    async def __aenter__(self) -> "PostgreSQLSchemaProvider":
         """Async context manager entry - just return self, don't auto-create pool."""
         return self
 
@@ -81,13 +81,15 @@ class PostgreSQLSchemaProvider:
                     max_size=3,  # Very conservative pool size
                     command_timeout=30,  # 30 second query timeout
                     server_settings={
-                        'jit': 'off',  # Disable JIT to reduce memory usage
-                        'work_mem': '4MB',  # Limit work memory per query
-                        'statement_timeout': '30s'  # 30 second statement timeout
-                    }
+                        "jit": "off",  # Disable JIT to reduce memory usage
+                        "work_mem": "4MB",  # Limit work memory per query
+                        "statement_timeout": "30s",  # 30 second statement timeout
+                    },
                 )
                 # Don't preload schemas here to avoid connection exhaustion
-                logger.info(f"✅ PostgreSQL connection pool created: {self.postgres_config['host']}:{self.postgres_config['port']}/{self.postgres_config['database']}")
+                logger.info(
+                    f"✅ PostgreSQL connection pool created: {self.postgres_config['host']}:{self.postgres_config['port']}/{self.postgres_config['database']}"
+                )
             except Exception as e:
                 logger.error(f"❌ Failed to create PostgreSQL pool: {e}")
                 raise
@@ -110,7 +112,7 @@ class PostgreSQLSchemaProvider:
         """Get a connection from pool."""
         if not self.connection_pool:
             raise RuntimeError("No database connection pool available. Call create_pool() first.")
-        
+
         try:
             return await self.connection_pool.acquire()
         except Exception as e:
@@ -126,22 +128,22 @@ class PostgreSQLSchemaProvider:
         """Parse table name and return (schema, table_name) tuple. Always assumes table is fully qualified with schema.table format."""
         if "." not in table:
             raise ValueError(f"Table name '{table}' must be in 'schema.table' format (e.g., 'retail.customers')")
-        
+
         parts = table.split(".", 1)
         if len(parts) != 2:
             raise ValueError(f"Table name '{table}' must be in 'schema.table' format (e.g., 'retail.customers')")
-        
+
         schema, table_name = parts
         if not schema or not table_name:
             raise ValueError(f"Table name '{table}' must be in 'schema.table' format (e.g., 'retail.customers')")
-        
+
         return schema, table_name
 
     def _get_qualified_table_name(self, table: str) -> str:
         """Get fully qualified table name with schema. Expects input to be already qualified."""
         if "." not in table:
             raise ValueError(f"Table name '{table}' must be in 'schema.table' format (e.g., 'retail.customers')")
-        
+
         # Validate the format is correct
         schema, table_name = self._parse_table_name(table)
         return table
@@ -157,7 +159,8 @@ class PostgreSQLSchemaProvider:
                     SELECT 1 FROM information_schema.tables 
                     WHERE table_schema = $1 AND table_name = $2
                 )""",
-                schema_name, table_name
+                schema_name,
+                table_name,
             )
             return bool(result) if result is not None else False
         except Exception:
@@ -177,7 +180,9 @@ class PostgreSQLSchemaProvider:
                     SELECT 1 FROM information_schema.columns 
                     WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
                 )""",
-                schema_name, table_name, column
+                schema_name,
+                table_name,
+                column,
             )
             return bool(result) if result is not None else False
         except Exception:
@@ -214,10 +219,11 @@ class PostgreSQLSchemaProvider:
         except ValueError:
             # If not in schema.table format, use as-is for comparison
             table_name = references_table
-            
+
         return (
             "many_to_one"
-            if table_name in {CUSTOMERS_TABLE, PRODUCTS_TABLE, STORES_TABLE, CATEGORIES_TABLE, PRODUCT_TYPES_TABLE, ORDERS_TABLE}
+            if table_name
+            in {CUSTOMERS_TABLE, PRODUCTS_TABLE, STORES_TABLE, CATEGORIES_TABLE, PRODUCT_TYPES_TABLE, ORDERS_TABLE}
             else "one_to_many"
         )
 
@@ -228,14 +234,14 @@ class PostgreSQLSchemaProvider:
             return self._schema_cache[table_name]
 
         schema_name, parsed_table_name = self._parse_table_name(table_name)
-        
+
         if not await self.table_exists(table_name):
             return {"error": f"Table '{table_name}' not found"}
 
         conn = None
         try:
             conn = await self.get_connection()
-            
+
             # Get column information
             columns = await conn.fetch(
                 """SELECT 
@@ -247,7 +253,8 @@ class PostgreSQLSchemaProvider:
                 FROM information_schema.columns 
                 WHERE table_schema = $1 AND table_name = $2
                 ORDER BY ordinal_position""",
-                schema_name, parsed_table_name
+                schema_name,
+                parsed_table_name,
             )
 
             # Get primary key information
@@ -260,10 +267,11 @@ class PostgreSQLSchemaProvider:
                 WHERE tc.constraint_type = 'PRIMARY KEY'
                     AND tc.table_schema = $1 
                     AND tc.table_name = $2""",
-                schema_name, parsed_table_name
+                schema_name,
+                parsed_table_name,
             )
-            
-            pk_columns = {row['column_name'] for row in primary_keys}
+
+            pk_columns = {row["column_name"] for row in primary_keys}
 
             # Get foreign key information
             foreign_keys = await conn.fetch(
@@ -281,7 +289,8 @@ class PostgreSQLSchemaProvider:
                 WHERE tc.constraint_type = 'FOREIGN KEY'
                     AND tc.table_schema = $1 
                     AND tc.table_name = $2""",
-                schema_name, parsed_table_name
+                schema_name,
+                parsed_table_name,
             )
 
             columns_format = ", ".join(f"{col['column_name']}:{col['data_type']}" for col in columns)
@@ -289,15 +298,9 @@ class PostgreSQLSchemaProvider:
 
             # Define enum queries for each table to get unique values
             enum_queries = {
-                STORES_TABLE: {
-                    "available_stores": ("store_name", f"{schema_name}.{STORES_TABLE}")
-                },
-                CATEGORIES_TABLE: {
-                    "available_categories": ("category_name", f"{schema_name}.{CATEGORIES_TABLE}")
-                },
-                PRODUCT_TYPES_TABLE: {
-                    "available_product_types": ("type_name", f"{schema_name}.{PRODUCT_TYPES_TABLE}")
-                },
+                STORES_TABLE: {"available_stores": ("store_name", f"{schema_name}.{STORES_TABLE}")},
+                CATEGORIES_TABLE: {"available_categories": ("category_name", f"{schema_name}.{CATEGORIES_TABLE}")},
+                PRODUCT_TYPES_TABLE: {"available_product_types": ("type_name", f"{schema_name}.{PRODUCT_TYPES_TABLE}")},
                 PRODUCTS_TABLE: {
                     # Removed available_product_names to avoid lengthy output
                 },
@@ -306,7 +309,7 @@ class PostgreSQLSchemaProvider:
                 },
                 ORDER_ITEMS_TABLE: {
                     # "price_range": ("unit_price", f"{schema_name}.{ORDER_ITEMS_TABLE}")
-                }
+                },
             }
 
             enum_data = {}
@@ -318,14 +321,14 @@ class PostgreSQLSchemaProvider:
                             result = await conn.fetchrow(
                                 f"SELECT MIN({column}) as min_price, MAX({column}) as max_price FROM {qualified_table}"
                             )
-                            if result and result['min_price'] is not None:
+                            if result and result["min_price"] is not None:
                                 enum_data[key] = f"${result['min_price']:.2f} - ${result['max_price']:.2f}"
                         elif key == "available_years":
                             # Handle years specially
                             rows = await conn.fetch(
                                 f"SELECT DISTINCT {column} as year FROM {qualified_table} WHERE order_date IS NOT NULL ORDER BY year"
                             )
-                            years = [str(row['year']) for row in rows if row['year']]
+                            years = [str(row["year"]) for row in rows if row["year"]]
                             enum_data[key] = years
                         else:
                             enum_data[key] = await self.fetch_distinct_values(column, qualified_table)
@@ -341,19 +344,19 @@ class PostgreSQLSchemaProvider:
                 "columns_format": columns_format,
                 "columns": [
                     {
-                        "name": col['column_name'],
-                        "type": col['data_type'],
-                        "primary_key": col['column_name'] in pk_columns,
-                        "required": col['is_nullable'] == 'NO',
-                        "default_value": col['column_default'],
+                        "name": col["column_name"],
+                        "type": col["data_type"],
+                        "primary_key": col["column_name"] in pk_columns,
+                        "required": col["is_nullable"] == "NO",
+                        "default_value": col["column_default"],
                     }
                     for col in columns
                 ],
                 "foreign_keys": [
                     {
-                        "column": fk['column_name'],
-                        "references_table": fk['foreign_table_name'],
-                        "references_column": fk['foreign_column_name'],
+                        "column": fk["column_name"],
+                        "references_table": fk["foreign_table_name"],
+                        "references_column": fk["foreign_column_name"],
                         "description": f"{fk['column_name']} links to {fk['foreign_table_name']}.{fk['foreign_column_name']}",
                         "relationship_type": self.infer_relationship_type(f"{schema_name}.{fk['foreign_table_name']}"),
                     }
@@ -365,7 +368,7 @@ class PostgreSQLSchemaProvider:
             # Cache result for future calls
             self._schema_cache[table_name] = schema_data
             return schema_data
-            
+
         finally:
             if conn:
                 await self.release_connection(conn)
@@ -379,9 +382,9 @@ class PostgreSQLSchemaProvider:
                 """SELECT table_name FROM information_schema.tables 
                    WHERE table_schema = $1 AND table_type = 'BASE TABLE'
                    ORDER BY table_name""",
-                schema_name
+                schema_name,
             )
-            return [row['table_name'] for row in rows]
+            return [row["table_name"] for row in rows]
         except Exception:
             return []
         finally:
@@ -405,19 +408,17 @@ class PostgreSQLSchemaProvider:
             return f"**ERROR:** {schema['error']}"
 
         # Always use the full schema.table format for display
-        table_display = schema.get('table_name')  # Should already be schema.table format
-        
+        table_display = schema.get("table_name")  # Should already be schema.table format
+
         # Extract just table name for description
         try:
             _, table_name_only = self._parse_table_name(table_display) if table_display else ("", "unknown")
-            table_description = table_name_only.replace('_', ' ')
+            table_description = table_name_only.replace("_", " ")
         except ValueError:
-            table_description = table_display.replace('_', ' ') if table_display else 'unknown'
+            table_description = table_display.replace("_", " ") if table_display else "unknown"
 
         lines = [f"# Table: {table_display}", ""]
-        lines.append(
-            f"**Purpose:** {schema.get('description', 'No description available')}"
-        )
+        lines.append(f"**Purpose:** {schema.get('description', 'No description available')}")
         lines.append("\n## Schema")
         lines.append(schema.get("columns_format", "N/A"))
 
@@ -425,19 +426,19 @@ class PostgreSQLSchemaProvider:
             lines.append("\n## Relationships")
             for fk in schema["foreign_keys"]:
                 # Use the schema from the current table being processed
-                current_schema = schema.get('schema_name')
+                current_schema = schema.get("schema_name")
                 if current_schema:
                     fk_table_ref = f"{current_schema}.{fk['references_table']}"
                 else:
                     # Fallback to just the table name if no schema available
-                    fk_table_ref = fk['references_table']
+                    fk_table_ref = fk["references_table"]
                 lines.append(
                     f"- `{fk['column']}` → `{fk_table_ref}.{fk['references_column']}` ({fk['relationship_type'].upper()})"
                 )
 
         enum_fields = [
             ("available_stores", "Valid Stores"),
-            ("available_categories", "Valid Categories"), 
+            ("available_categories", "Valid Categories"),
             ("available_product_types", "Valid Product Types"),
             ("available_years", "Available Years"),
             ("price_range", "Price Range"),
@@ -448,30 +449,24 @@ class PostgreSQLSchemaProvider:
             if schema.get(field_key):
                 values = schema[field_key]
                 # Always show the full list, no truncation
-                enum_lines.append(
-                    f"**{label}:** {', '.join(values) if isinstance(values, list) else values}"
-                )
+                enum_lines.append(f"**{label}:** {', '.join(values) if isinstance(values, list) else values}")
 
         if enum_lines:
             lines.append("\n## Valid Values")
             lines.extend(enum_lines)
 
         lines.append("\n## Query Hints")
-        lines.append(
-            f"- Use `{table_display}` for queries about {table_description}"
-        )
+        lines.append(f"- Use `{table_display}` for queries about {table_description}")
         if schema.get("foreign_keys"):
             for fk in schema["foreign_keys"]:
                 # Use the schema from the current table being processed
-                current_schema = schema.get('schema_name')
+                current_schema = schema.get("schema_name")
                 if current_schema:
                     fk_table_ref = f"{current_schema}.{fk['references_table']}"
                 else:
                     # Fallback to just the table name if no schema available
-                    fk_table_ref = fk['references_table']
-                lines.append(
-                    f"- Join with `{fk_table_ref}` using `{fk['column']}`"
-                )
+                    fk_table_ref = fk["references_table"]
+                lines.append(f"- Join with `{fk_table_ref}` using `{fk['column']}`")
 
         return "\n".join(lines) + "\n"
 
@@ -487,37 +482,39 @@ class PostgreSQLSchemaProvider:
         conn = None
         try:
             conn = await self.get_connection()
-            
+
             # logger.info(f"\n🔍 Executing PostgreSQL query: {sql_query}\n")
             rows = await conn.fetch(sql_query)
-            
+
             if not rows:
-                return json.dumps({
-                    "results": [],
-                    "row_count": 0,
-                    "columns": [],
-                    "message": "The query returned no results. Try a different question."
-                })
+                return json.dumps(
+                    {
+                        "results": [],
+                        "row_count": 0,
+                        "columns": [],
+                        "message": "The query returned no results. Try a different question.",
+                    }
+                )
 
             # Convert asyncpg Records to list of dictionaries (much simpler!)
             results = [dict(row) for row in rows]
             columns = list(rows[0].keys()) if rows else []
-            
+
             # Return LLM-friendly format
-            return json.dumps({
-                "results": results,
-                "row_count": len(results),
-                "columns": columns
-            }, indent=2, default=str)
+            return json.dumps(
+                {"results": results, "row_count": len(results), "columns": columns}, indent=2, default=str
+            )
 
         except Exception as e:
-            return json.dumps({
-                "error": f"PostgreSQL query failed: {e!s}",
-                "query": sql_query,
-                "results": [],
-                "row_count": 0,
-                "columns": []
-            })
+            return json.dumps(
+                {
+                    "error": f"PostgreSQL query failed: {e!s}",
+                    "query": sql_query,
+                    "results": [],
+                    "row_count": 0,
+                    "columns": [],
+                }
+            )
         finally:
             if conn:
                 await self.release_connection(conn)
@@ -556,10 +553,10 @@ async def main() -> None:
         async with PostgreSQLSchemaProvider() as provider:
             # Create connection pool (schemas will be loaded lazily when needed)
             await provider.create_pool()
-            
+
             # Preload schemas for testing
             await provider.ensure_schemas_loaded(SCHEMA_NAME)
-            
+
             logger.info(f"\n📋 Getting all table schemas from {SCHEMA_NAME} schema...")
             if not provider.all_schemas:
                 logger.warning(f"❌ No schemas available in {SCHEMA_NAME} schema")
@@ -571,21 +568,15 @@ async def main() -> None:
             logger.info("=" * 50)
 
             logger.info("\n📊 Test 1: Count all customers")
-            result = await provider.execute_query(
-                f"SELECT COUNT(*) as total_customers FROM {SCHEMA_NAME}.customers"
-            )
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_customers FROM {SCHEMA_NAME}.customers")
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 2: Count stores")
-            result = await provider.execute_query(
-                f"SELECT COUNT(*) as total_stores FROM {SCHEMA_NAME}.stores"
-            )
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_stores FROM {SCHEMA_NAME}.stores")
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 3: Count categories and types")
-            result = await provider.execute_query(
-                f"SELECT COUNT(*) as total_categories FROM {SCHEMA_NAME}.categories"
-            )
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_categories FROM {SCHEMA_NAME}.categories")
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 4: Orders with revenue")
