@@ -66,15 +66,20 @@ async def get_table_schema(table_name: str) -> str:
         return f"Error retrieving {table_name} table schema: {e!s}"
 
 
-@mcp.tool(description="Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation.")
+@mcp.tool()
 async def get_multiple_table_schemas(
-    table_names: Annotated[list[str], Field(description='List of table names. Valid table names include "retail.customers", "retail.stores", "retail.categories", "retail.product_types", "retail.products", "retail.orders", "retail.order_items", "retail.inventory".')]
+    table_names: Annotated[
+        list[str],
+        Field(
+            description="List of table names. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'."
+        ),
+    ],
 ) -> str:
     """
-    Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'.
+    Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation.
 
     Args:
-        table_names: List of table names.
+        table_names: List of table names. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'.
 
     Returns:
         Concatenated schema strings for the requested tables.
@@ -83,8 +88,14 @@ async def get_multiple_table_schemas(
         return "Error: table_names parameter is required and cannot be empty"
 
     valid_tables = {
-        "retail.customers", "retail.stores", "retail.categories", "retail.product_types",
-        "retail.products", "retail.orders", "retail.order_items", "retail.inventory"
+        "retail.customers",
+        "retail.stores",
+        "retail.categories",
+        "retail.product_types",
+        "retail.products",
+        "retail.orders",
+        "retail.order_items",
+        "retail.inventory",
     }
 
     # Validate table names
@@ -107,9 +118,9 @@ async def get_multiple_table_schemas(
 
 @mcp.tool()
 async def execute_sales_query(
-    postgresql_query: Annotated[str, Field(description='A well-formed PostgreSQL query.')]
-    ) -> str:
-    """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven’t yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY.
+    postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")],
+) -> str:
+    """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven't yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY.
 
     Args:
         postgresql_query: A well-formed PostgreSQL query.
@@ -162,7 +173,8 @@ async def run_http_server() -> None:
 def main() -> None:
     """Main entry point for the MCP server."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('--stdio', action='store_true', help='Run server in stdio mode')
+    parser.add_argument("--stdio", action="store_true",
+                        help="Run server in stdio mode")
     args = parser.parse_args()
 
     if args.stdio:
