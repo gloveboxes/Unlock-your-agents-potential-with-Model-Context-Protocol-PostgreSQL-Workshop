@@ -42,8 +42,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 
 # Create MCP server with lifespan support
-mcp = FastMCP("mcp-zava-sales-devcontainer",
-              lifespan=app_lifespan, stateless_http=True)
+mcp = FastMCP("mcp-zava-sales-devcontainer", lifespan=app_lifespan, stateless_http=True)
 
 
 def get_db_provider() -> PostgreSQLSchemaProvider:
@@ -163,8 +162,7 @@ async def run_http_server() -> None:
     mcp.settings.port = 8010
     # mcp.settings.stateless_http = True
 
-    print(
-        f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
+    print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
 
     # Run the FastMCP server as HTTP endpoint
     await mcp.run_streamable_http_async()
@@ -173,8 +171,7 @@ async def run_http_server() -> None:
 def main() -> None:
     """Main entry point for the MCP server."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stdio", action="store_true",
-                        help="Run server in stdio mode")
+    parser.add_argument("--stdio", action="store_true", help="Run server in stdio mode")
     args = parser.parse_args()
 
     if args.stdio:
