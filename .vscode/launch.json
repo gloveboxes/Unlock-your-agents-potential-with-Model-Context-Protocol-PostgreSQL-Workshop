@@ -4,16 +4,16 @@
         {
             "name": "Debug: Agent Service + Web App",
             "configurations": [
-                "Debug: Agent Service",
+                "Debug: Agent Manager",
                 "Debug: Web App"
             ],
             "stopAll": true
         },
         {
-            "name": "Debug: MCP Server + Agent Service + Web App",
+            "name": "Debug: MCP Server + Agent Manager + Web App",
             "configurations": [
                 "Debug: MCP Sales Server",
-                "Debug: Agent Service",
+                "Debug: Agent Manager",
                 "Debug: Web App"
             ],
             "stopAll": true
@@ -21,10 +21,10 @@
     ],
     "configurations": [
         {
-            "name": "Debug: Agent Service",
+            "name": "Debug: Agent Manager",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/python/workshop/agent_service.py",
+            "program": "${workspaceFolder}/src/python/workshop/app.py",
             "console": "integratedTerminal",
             "args": [],
             "env": {
