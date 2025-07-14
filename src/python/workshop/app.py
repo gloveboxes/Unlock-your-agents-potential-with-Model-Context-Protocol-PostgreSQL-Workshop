@@ -99,7 +99,7 @@ class AgentManager:
             )
 
             # Setup tools
-            await self._setup_tools()
+            # await self._setup_tools()
 
             # Enable Azure Monitor Telemetry
             configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
@@ -113,18 +113,16 @@ class AgentManager:
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
-                    toolset=self.toolset,
-                    # tools=tools,
+                    toolset=self.toolset if self.toolset.definitions else None,
+                    tools=tools if not self.toolset.definitions else None,
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
 
                 # Enable auto function calls
-                try:
+                if self.toolset.definitions:
                     self.agents_client.enable_auto_function_calls(tools=self.toolset)
                     print("Enabled auto function calls.")
-                except Exception as e:
-                    pass  # Ignore as there may be no tools
 
                 # Create thread
                 print("Creating thread...")
