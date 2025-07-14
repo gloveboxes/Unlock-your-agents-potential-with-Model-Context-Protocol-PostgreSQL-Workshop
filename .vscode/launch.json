@@ -13,7 +13,7 @@
             "name": "Debug: MCP Server + Agent Manager + Web App",
             "configurations": [
                 "Debug: MCP Sales Server",
-                "Debug: Agent Manager",
+                "Debug: Agent Manager (No MCP)",
                 "Debug: Web App"
             ],
             "stopAll": true
@@ -28,7 +28,21 @@
             "console": "integratedTerminal",
             "args": [],
             "env": {
-                "PYDEVD_DISABLE_FILE_VALIDATION": "1"
+                "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+                "MAP_MCP_FUNCTIONS": "true"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "Debug: Agent Manager (No MCP)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/python/workshop/app.py",
+            "console": "integratedTerminal",
+            "args": [],
+            "env": {
+                "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+                "MAP_MCP_FUNCTIONS": "false"
             },
             "justMyCode": true
         },

@@ -31,6 +31,9 @@ class Config:
     TEMPERATURE = 0.1
     TOP_P = 0.1
 
+    # MCP configuration
+    MAP_MCP_FUNCTIONS: bool = os.getenv("MAP_MCP_FUNCTIONS", "true").lower() in ("true", "1", "yes")
+
     @classmethod
     def validate_required_env_vars(cls) -> None:
         """Validate that all required environment variables are set."""
