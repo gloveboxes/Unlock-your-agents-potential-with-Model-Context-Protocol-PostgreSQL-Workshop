@@ -28,11 +28,13 @@ USAGE:
     python generate_zava_postgres.py --help              # Show all options
 """
 
+import argparse
 import asyncio
 import json
 import logging
 import os
 import random
+import sys
 from datetime import date
 from typing import Dict, List, Optional, Tuple
 
@@ -62,14 +64,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # PostgreSQL connection configuration
 POSTGRES_CONFIG = {
-    'host': os.getenv('postgres_host', 'db'),
-    'port': int(os.getenv('postgres_port', '5432')),
-    'user': os.getenv('postgres_user', 'postgres'),
-    'password': os.getenv('postgres_password', 'P@ssw0rd!'),
-    'database': os.getenv('postgres_db', 'zava')
+    'host': 'db',
+    'port': 5432,
+    'user': 'postgres',
+    'password': 'P@ssw0rd!',
+    'database': 'zava'
 }
 
 SCHEMA_NAME = 'retail'
+
+# Super Manager UUID - has access to all rows regardless of RLS policies
+SUPER_MANAGER_UUID = '00000000-0000-0000-0000-000000000000'
 
 # Load reference data from JSON file
 def load_reference_data():
@@ -149,7 +154,9 @@ async def create_database_schema(conn):
         await conn.execute(f"""
             CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.stores (
                 store_id SERIAL PRIMARY KEY,
-                store_name TEXT UNIQUE NOT NULL
+                store_name TEXT UNIQUE NOT NULL,
+                manager_id UUID NOT NULL DEFAULT gen_random_uuid(),
+                is_online BOOLEAN NOT NULL DEFAULT false
             )
         """)
         
@@ -160,7 +167,10 @@ async def create_database_schema(conn):
                 first_name TEXT NOT NULL,
                 last_name TEXT NOT NULL,
                 email TEXT UNIQUE NOT NULL,
-                phone TEXT
+                phone TEXT,
+                primary_store_id INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (primary_store_id) REFERENCES {SCHEMA_NAME}.stores (store_id)
             )
         """)
         
@@ -182,7 +192,7 @@ async def create_database_schema(conn):
             )
         """)
         
-        # Create products table with optional vector embedding column
+        # Create products table with cost and selling price for 33% gross margin
         await conn.execute(f"""
             CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.products (
                 product_id SERIAL PRIMARY KEY,
@@ -190,7 +200,9 @@ async def create_database_schema(conn):
                 product_name TEXT NOT NULL,
                 category_id INTEGER NOT NULL,
                 type_id INTEGER NOT NULL,
+                cost DECIMAL(10,2) NOT NULL,
                 base_price DECIMAL(10,2) NOT NULL,
+                gross_margin_percent DECIMAL(5,2) DEFAULT 33.00,
                 product_description TEXT NOT NULL,
                 FOREIGN KEY (category_id) REFERENCES {SCHEMA_NAME}.categories (category_id),
                 FOREIGN KEY (type_id) REFERENCES {SCHEMA_NAME}.product_types (type_id)
@@ -226,6 +238,7 @@ async def create_database_schema(conn):
             CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.order_items (
                 order_item_id SERIAL PRIMARY KEY,
                 order_id INTEGER NOT NULL,
+                store_id INTEGER NOT NULL,
                 product_id INTEGER NOT NULL,
                 quantity INTEGER NOT NULL,
                 unit_price DECIMAL(10,2) NOT NULL,
@@ -233,6 +246,7 @@ async def create_database_schema(conn):
                 discount_amount DECIMAL(10,2) DEFAULT 0,
                 total_amount DECIMAL(10,2) NOT NULL,
                 FOREIGN KEY (order_id) REFERENCES {SCHEMA_NAME}.orders (order_id),
+                FOREIGN KEY (store_id) REFERENCES {SCHEMA_NAME}.stores (store_id),
                 FOREIGN KEY (product_id) REFERENCES {SCHEMA_NAME}.products (product_id)
             )
         """)
@@ -262,13 +276,8 @@ async def create_database_schema(conn):
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_category ON {SCHEMA_NAME}.products(category_id)")
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_type ON {SCHEMA_NAME}.products(type_id)")
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_price ON {SCHEMA_NAME}.products(base_price)")
-        
-        # Vector similarity index (if pgvector is available)
-        try:
-            await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_embedding ON {SCHEMA_NAME}.products USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)")
-            logging.info("Vector similarity index created")
-        except Exception as e:
-            logging.warning(f"Could not create vector index: {e}")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_cost ON {SCHEMA_NAME}.products(cost)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_margin ON {SCHEMA_NAME}.products(gross_margin_percent)")
         
         # Inventory indexes
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_inventory_store_product ON {SCHEMA_NAME}.inventory(store_id, product_id)")
@@ -287,6 +296,7 @@ async def create_database_schema(conn):
         
         # Order items indexes
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_order ON {SCHEMA_NAME}.order_items(order_id)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_store ON {SCHEMA_NAME}.order_items(store_id)")
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_product ON {SCHEMA_NAME}.order_items(product_id)")
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_total ON {SCHEMA_NAME}.order_items(total_amount)")
         
@@ -302,17 +312,208 @@ async def create_database_schema(conn):
             logging.warning(f"Could not create product embeddings vector index: {e}")
         
         # Covering indexes for aggregation queries
-        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_covering ON {SCHEMA_NAME}.order_items(order_id, product_id, total_amount, quantity)")
-        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_covering ON {SCHEMA_NAME}.products(category_id, type_id, product_id, sku, base_price)")
-        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_sku_covering ON {SCHEMA_NAME}.products(sku, product_id, product_name, base_price)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_order_items_covering ON {SCHEMA_NAME}.order_items(order_id, store_id, product_id, total_amount, quantity)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_covering ON {SCHEMA_NAME}.products(category_id, type_id, product_id, sku, cost, base_price)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_products_sku_covering ON {SCHEMA_NAME}.products(sku, product_id, product_name, cost, base_price)")
         
         # Customer indexes
         await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_customers_email ON {SCHEMA_NAME}.customers(email)")
+        await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_customers_primary_store ON {SCHEMA_NAME}.customers(primary_store_id)")
         
         logging.info("Performance indexes created successfully!")
+        
+        # Enable Row Level Security (RLS) and create policies
+        # Note: All RLS policies include access for SUPER_MANAGER_UUID which bypasses all restrictions
+        logging.info("Setting up Row Level Security policies...")
+        logging.info(f"Super Manager UUID (access to all rows): {SUPER_MANAGER_UUID}")
+        
+        # Enable RLS on tables that should be restricted by store manager
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.orders ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.order_items ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.inventory ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.customers ENABLE ROW LEVEL SECURITY")
+        
+        # Enable RLS on reference tables that store managers should have full access to
+        # Note: These tables will have permissive policies allowing all authenticated users
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.stores ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.categories ENABLE ROW LEVEL SECURITY") 
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.product_types ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.products ENABLE ROW LEVEL SECURITY")
+        await conn.execute(f"ALTER TABLE {SCHEMA_NAME}.product_embeddings ENABLE ROW LEVEL SECURITY")
+        
+        # Create RLS policies for orders - store managers can only see orders from their store
+        await conn.execute(f"DROP POLICY IF EXISTS store_manager_orders ON {SCHEMA_NAME}.orders")
+        await conn.execute(f"""
+            CREATE POLICY store_manager_orders ON {SCHEMA_NAME}.orders
+            FOR ALL TO PUBLIC
+            USING (
+                -- Super manager has access to all rows
+                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                OR
+                -- Store managers can only see orders from their store
+                EXISTS (
+                    SELECT 1 FROM {SCHEMA_NAME}.stores s 
+                    WHERE s.store_id = {SCHEMA_NAME}.orders.store_id 
+                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                )
+            )
+        """)
+        
+        # Create RLS policies for order_items - direct store access for better performance
+        await conn.execute(f"DROP POLICY IF EXISTS store_manager_order_items ON {SCHEMA_NAME}.order_items")
+        await conn.execute(f"""
+            CREATE POLICY store_manager_order_items ON {SCHEMA_NAME}.order_items
+            FOR ALL TO PUBLIC
+            USING (
+                -- Super manager has access to all rows
+                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                OR
+                -- Store managers can only see order items from their store
+                EXISTS (
+                    SELECT 1 FROM {SCHEMA_NAME}.stores s 
+                    WHERE s.store_id = {SCHEMA_NAME}.order_items.store_id 
+                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                )
+            )
+        """)
+        
+        # Create RLS policies for inventory - store managers can only see their store's inventory
+        await conn.execute(f"DROP POLICY IF EXISTS store_manager_inventory ON {SCHEMA_NAME}.inventory")
+        await conn.execute(f"""
+            CREATE POLICY store_manager_inventory ON {SCHEMA_NAME}.inventory
+            FOR ALL TO PUBLIC
+            USING (
+                -- Super manager has access to all rows
+                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                OR
+                -- Store managers can only see their store's inventory
+                EXISTS (
+                    SELECT 1 FROM {SCHEMA_NAME}.stores s 
+                    WHERE s.store_id = {SCHEMA_NAME}.inventory.store_id 
+                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                )
+            )
+        """)
+        
+        # For customers, they can only see customers assigned to their store
+        await conn.execute(f"DROP POLICY IF EXISTS store_manager_customers ON {SCHEMA_NAME}.customers")
+        await conn.execute(f"""
+            CREATE POLICY store_manager_customers ON {SCHEMA_NAME}.customers
+            FOR ALL TO PUBLIC
+            USING (
+                -- Super manager has access to all rows
+                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                OR
+                -- Store managers can only see customers assigned to their store
+                EXISTS (
+                    SELECT 1 FROM {SCHEMA_NAME}.stores s 
+                    WHERE s.store_id = {SCHEMA_NAME}.customers.primary_store_id 
+                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                )
+                OR
+                -- Also allow access to customers who have ordered from their store (backward compatibility)
+                EXISTS (
+                    SELECT 1 FROM {SCHEMA_NAME}.orders o
+                    JOIN {SCHEMA_NAME}.stores s ON o.store_id = s.store_id
+                    WHERE o.customer_id = {SCHEMA_NAME}.customers.customer_id
+                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                )
+            )
+        """)
+        
+        # Create permissive RLS policies for reference tables that all authenticated users should access
+        
+        # Stores table - managers can see all stores (needed for reference)
+        await conn.execute(f"DROP POLICY IF EXISTS all_users_stores ON {SCHEMA_NAME}.stores")
+        await conn.execute(f"""
+            CREATE POLICY all_users_stores ON {SCHEMA_NAME}.stores
+            FOR ALL TO PUBLIC
+            USING (true)
+        """)
+        
+        # Categories table - all users can see all categories
+        await conn.execute(f"DROP POLICY IF EXISTS all_users_categories ON {SCHEMA_NAME}.categories")
+        await conn.execute(f"""
+            CREATE POLICY all_users_categories ON {SCHEMA_NAME}.categories
+            FOR ALL TO PUBLIC
+            USING (true)
+        """)
+        
+        # Product types table - all users can see all product types
+        await conn.execute(f"DROP POLICY IF EXISTS all_users_product_types ON {SCHEMA_NAME}.product_types")
+        await conn.execute(f"""
+            CREATE POLICY all_users_product_types ON {SCHEMA_NAME}.product_types
+            FOR ALL TO PUBLIC
+            USING (true)
+        """)
+        
+        # Products table - all users can see all products
+        await conn.execute(f"DROP POLICY IF EXISTS all_users_products ON {SCHEMA_NAME}.products")
+        await conn.execute(f"""
+            CREATE POLICY all_users_products ON {SCHEMA_NAME}.products
+            FOR ALL TO PUBLIC
+            USING (true)
+        """)
+        
+        # Product embeddings table - all users can see all product embeddings
+        await conn.execute(f"DROP POLICY IF EXISTS all_users_product_embeddings ON {SCHEMA_NAME}.product_embeddings")
+        await conn.execute(f"""
+            CREATE POLICY all_users_product_embeddings ON {SCHEMA_NAME}.product_embeddings
+            FOR ALL TO PUBLIC
+            USING (true)
+        """)
+        
+        logging.info("Row Level Security policies created successfully!")
+        
+        # Grant permissions to store_manager role
+        await setup_store_manager_permissions(conn)
+        
         logging.info("Database schema created successfully!")
     except Exception as e:
         logging.error(f"Error creating database schema: {e}")
+        raise
+
+async def setup_store_manager_permissions(conn):
+    """Setup permissions for store_manager user to access the retail schema and tables"""
+    try:
+        logging.info("Setting up store_manager permissions...")
+        
+        # Check if store_manager role exists, create if it doesn't
+        role_exists = await conn.fetchval(
+            "SELECT 1 FROM pg_roles WHERE rolname = 'store_manager'"
+        )
+        
+        if not role_exists:
+            await conn.execute("CREATE ROLE store_manager LOGIN")
+            logging.info("Created store_manager role")
+        else:
+            logging.info("store_manager role already exists")
+        
+        # Grant usage on the retail schema
+        await conn.execute(f"GRANT USAGE ON SCHEMA {SCHEMA_NAME} TO store_manager")
+        
+        # Grant SELECT permissions on all tables in the retail schema
+        await conn.execute(f"GRANT SELECT ON ALL TABLES IN SCHEMA {SCHEMA_NAME} TO store_manager")
+        
+        # Grant permissions on sequences (for SERIAL columns)
+        await conn.execute(f"GRANT USAGE ON ALL SEQUENCES IN SCHEMA {SCHEMA_NAME} TO store_manager")
+        
+        # Grant permissions for future tables (in case new tables are added)
+        await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT SELECT ON TABLES TO store_manager")
+        await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT USAGE ON SEQUENCES TO store_manager")
+        
+        # Also grant some additional permissions that might be needed
+        await conn.execute(f"GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {SCHEMA_NAME} TO store_manager")
+        await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT INSERT, UPDATE, DELETE ON TABLES TO store_manager")
+        
+        logging.info("Store manager permissions granted successfully!")
+        logging.info("Store manager can now:")
+        logging.info("  - Access the retail schema")
+        logging.info("  - SELECT, INSERT, UPDATE, DELETE on all tables")
+        logging.info("  - Row Level Security policies will filter data based on manager_id")
+        
+    except Exception as e:
+        logging.error(f"Error setting up store_manager permissions: {e}")
         raise
 
 async def batch_insert(conn, query: str, data: List[Tuple], batch_size: int = 1000):
@@ -326,6 +527,13 @@ async def insert_customers(conn, num_customers: int = 100000):
     try:
         logging.info(f"Generating {num_customers:,} customers...")
         
+        # Get store IDs for assignment
+        store_rows = await conn.fetch(f"SELECT store_id, store_name FROM {SCHEMA_NAME}.stores")
+        store_ids = [row['store_id'] for row in store_rows]
+        
+        if not store_ids:
+            raise Exception("No stores found! Please insert stores first.")
+        
         customers_data = []
         
         for i in range(1, num_customers + 1):
@@ -334,9 +542,42 @@ async def insert_customers(conn, num_customers: int = 100000):
             email = f"{first_name.lower()}.{last_name.lower()}.{i}@example.com"
             phone = generate_phone_number()
             
-            customers_data.append((first_name, last_name, email, phone))
+            # Assign every customer to a store based on weighted distribution
+            # Use the same weighted store choice as orders for consistency
+            preferred_store_name = weighted_store_choice()
+            primary_store_id = None
+            for row in store_rows:
+                if row['store_name'] == preferred_store_name:
+                    primary_store_id = row['store_id']
+                    break
+            
+            # Fallback to first store if lookup fails (should not happen)
+            if primary_store_id is None:
+                primary_store_id = store_rows[0]['store_id']
+            
+            customers_data.append((first_name, last_name, email, phone, primary_store_id))
         
-        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.customers (first_name, last_name, email, phone) VALUES ($1, $2, $3, $4)", customers_data)
+        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.customers (first_name, last_name, email, phone, primary_store_id) VALUES ($1, $2, $3, $4, $5)", customers_data)
+        
+        # Log customer distribution by store
+        distribution = await conn.fetch(f"""
+            SELECT s.store_name, COUNT(c.customer_id) as customer_count,
+                   ROUND(100.0 * COUNT(c.customer_id) / {num_customers}, 1) as percentage
+            FROM {SCHEMA_NAME}.stores s
+            LEFT JOIN {SCHEMA_NAME}.customers c ON s.store_id = c.primary_store_id
+            GROUP BY s.store_id, s.store_name
+            ORDER BY customer_count DESC
+        """)
+        
+        no_store_count = await conn.fetchval(f"SELECT COUNT(*) FROM {SCHEMA_NAME}.customers WHERE primary_store_id IS NULL")
+        
+        logging.info("Customer distribution by store:")
+        for row in distribution:
+            logging.info(f"  {row['store_name']}: {row['customer_count']:,} customers ({row['percentage']}%)")
+        if no_store_count > 0:
+            logging.info(f"  No primary store: {no_store_count:,} customers ({100.0 * no_store_count / num_customers:.1f}%)")
+        else:
+            logging.info("  ✅ All customers have been assigned to stores!")
         
         logging.info(f"Successfully inserted {num_customers:,} customers!")
     except Exception as e:
@@ -351,9 +592,17 @@ async def insert_stores(conn):
         stores_data = []
         
         for store_name, store_config in stores.items():
-            stores_data.append((store_name,))
+            # Determine if this is an online store
+            is_online = "online" in store_name.lower()
+            stores_data.append((store_name, is_online))
         
-        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.stores (store_name) VALUES ($1)", stores_data)
+        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.stores (store_name, is_online) VALUES ($1, $2)", stores_data)
+        
+        # Log the manager IDs for workshop purposes
+        rows = await conn.fetch(f"SELECT store_name, manager_id FROM {SCHEMA_NAME}.stores ORDER BY store_name")
+        logging.info("Store Manager IDs (for workshop use):")
+        for row in rows:
+            logging.info(f"  {row['store_name']}: {row['manager_id']}")
         
         logging.info(f"Successfully inserted {len(stores_data):,} stores!")
     except Exception as e:
@@ -445,12 +694,20 @@ async def insert_products(conn):
                 for product_details in product_list:
                     product_name = product_details["name"]
                     sku = product_details.get("sku", f"SKU{len(products_data)+1:06d}")  # Fallback if no SKU
-                    fixed_price = product_details["price"]
+                    json_price = product_details["price"]
                     description = product_details["description"]
-                    base_price = float(fixed_price)
-                    products_data.append((sku, product_name, category_id, type_id, base_price, description))
+                    
+                    # Treat the JSON price as the cost
+                    cost = float(json_price)
+                    
+                    # Calculate selling price for 33% gross margin
+                    # Gross Margin = (Selling Price - Cost) / Selling Price = 0.33
+                    # Therefore: Selling Price = Cost / (1 - 0.33) = Cost / 0.67
+                    base_price = round(cost / 0.67, 2)
+                    
+                    products_data.append((sku, product_name, category_id, type_id, cost, base_price, description))
         
-        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.products (sku, product_name, category_id, type_id, base_price, product_description) VALUES ($1, $2, $3, $4, $5, $6)", products_data)
+        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.products (sku, product_name, category_id, type_id, cost, base_price, product_description) VALUES ($1, $2, $3, $4, $5, $6, $7)", products_data)
         
         logging.info(f"Successfully inserted {len(products_data):,} products!")
         return len(products_data)  # Return the number of products inserted
@@ -773,7 +1030,7 @@ async def insert_orders(conn, num_customers: int = 100000, product_lookup: Optio
     
     # Get available product IDs for faster random selection and build category mapping
     product_rows = await conn.fetch(f"""
-        SELECT p.product_id, p.base_price, c.category_name 
+        SELECT p.product_id, p.cost, p.base_price, c.category_name 
         FROM {SCHEMA_NAME}.products p
         JOIN {SCHEMA_NAME}.categories c ON p.category_id = c.category_id
     """)
@@ -874,7 +1131,7 @@ async def insert_orders(conn, num_customers: int = 100000, product_lookup: Optio
                 total_amount = (unit_price * quantity) - discount_amount
                 
                 order_items_data.append((
-                    order_id, product_id, quantity, unit_price, 
+                    order_id, store_id, product_id, quantity, unit_price, 
                     discount_percent, discount_amount, total_amount
                 ))
         
@@ -890,8 +1147,8 @@ async def insert_orders(conn, num_customers: int = 100000, product_lookup: Optio
             if order_items_data:
                 await batch_insert(conn, f"""
                     INSERT INTO {SCHEMA_NAME}.order_items 
-                    (order_id, product_id, quantity, unit_price, discount_percent, discount_amount, total_amount) 
-                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    (order_id, store_id, product_id, quantity, unit_price, discount_percent, discount_amount, total_amount) 
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 """, order_items_data)
                 order_items_data = []
             
@@ -908,8 +1165,8 @@ async def insert_orders(conn, num_customers: int = 100000, product_lookup: Optio
     if order_items_data:
         await batch_insert(conn, f"""
             INSERT INTO {SCHEMA_NAME}.order_items 
-            (order_id, product_id, quantity, unit_price, discount_percent, discount_amount, total_amount) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (order_id, store_id, product_id, quantity, unit_price, discount_percent, discount_amount, total_amount) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         """, order_items_data)
     
     logging.info(f"Successfully inserted {total_orders:,} orders!")
@@ -996,6 +1253,42 @@ async def verify_database_contents(conn):
     embeddings = await conn.fetchval(f"SELECT COUNT(*) FROM {SCHEMA_NAME}.product_embeddings")
     total_revenue = await conn.fetchval(f"SELECT SUM(total_amount) FROM {SCHEMA_NAME}.order_items")
     
+    # Gross margin analysis
+    logging.info("\n💰 GROSS MARGIN ANALYSIS:")
+    margin_stats = await conn.fetch(f"""
+        SELECT 
+            COUNT(*) as product_count,
+            AVG(cost) as avg_cost,
+            AVG(base_price) as avg_selling_price,
+            AVG((base_price - cost) / base_price * 100) as avg_gross_margin_percent,
+            MIN((base_price - cost) / base_price * 100) as min_gross_margin_percent,
+            MAX((base_price - cost) / base_price * 100) as max_gross_margin_percent
+        FROM {SCHEMA_NAME}.products
+    """)
+    
+    if margin_stats:
+        stats = margin_stats[0]
+        logging.info(f"   Average Cost:           ${stats['avg_cost']:.2f}")
+        logging.info(f"   Average Selling Price:  ${stats['avg_selling_price']:.2f}")
+        logging.info(f"   Average Gross Margin:   {stats['avg_gross_margin_percent']:.1f}%")
+        logging.info(f"   Margin Range:           {stats['min_gross_margin_percent']:.1f}% - {stats['max_gross_margin_percent']:.1f}%")
+    
+    # Calculate total cost and gross profit from actual sales
+    sales_margin = await conn.fetchrow(f"""
+        SELECT 
+            SUM(oi.total_amount) as total_revenue,
+            SUM(p.cost * oi.quantity) as total_cost,
+            SUM(oi.total_amount) - SUM(p.cost * oi.quantity) as total_gross_profit
+        FROM {SCHEMA_NAME}.order_items oi
+        JOIN {SCHEMA_NAME}.products p ON oi.product_id = p.product_id
+    """)
+    
+    if sales_margin and sales_margin['total_revenue']:
+        actual_margin_pct = (sales_margin['total_gross_profit'] / sales_margin['total_revenue']) * 100
+        logging.info(f"   Actual Sales Margin:    {actual_margin_pct:.1f}%")
+        logging.info(f"   Total Cost of Goods:    ${sales_margin['total_cost']:.2f}")
+        logging.info(f"   Total Gross Profit:     ${sales_margin['total_gross_profit']:.2f}")
+
     logging.info("\n✅ DATABASE SUMMARY:")
     logging.info(f"   Customers:          {customers:>8,}")
     logging.info(f"   Products:           {products:>8,}")
@@ -1411,3 +1704,227 @@ if __name__ == "__main__":
         exit(1)
     
     asyncio.run(main())
+
+
+# =============================================================================
+# ROW LEVEL SECURITY HELPER FUNCTIONS FOR WORKSHOP/DEMO
+# =============================================================================
+
+async def demo_row_level_security():
+    """
+    Demonstration function showing how Row Level Security works with store managers.
+    
+    This function shows how to:
+    1. Set a manager context
+    2. Query data that will be filtered by RLS policies
+    3. Switch to a different manager and see different results
+    
+    Usage for workshop:
+        python -c "import asyncio; from generate_zava_postgres import demo_row_level_security; asyncio.run(demo_row_level_security())"
+    """
+    conn = await create_connection()
+    
+    try:
+        # Get all stores and their manager IDs
+        stores_info = await conn.fetch(f"""
+            SELECT store_name, manager_id 
+            FROM {SCHEMA_NAME}.stores 
+            ORDER BY store_name
+        """)
+        
+        print("\n" + "=" * 60)
+        print("ROW LEVEL SECURITY DEMONSTRATION")
+        print("=" * 60)
+        
+        print("\nAvailable stores and their manager IDs:")
+        for store in stores_info:
+            print(f"  {store['store_name']}: {store['manager_id']}")
+        
+        # Demo with first two stores
+        if len(stores_info) >= 2:
+            store1 = stores_info[0]
+            store2 = stores_info[1]
+            
+            print(f"\n--- Demonstrating RLS for {store1['store_name']} ---")
+            await demo_manager_view(conn, store1['manager_id'], store1['store_name'])
+            
+            print(f"\n--- Demonstrating RLS for {store2['store_name']} ---")
+            await demo_manager_view(conn, store2['manager_id'], store2['store_name'])
+            
+        print("\n" + "=" * 60)
+        print("RLS DEMONSTRATION COMPLETE")
+        print("=" * 60)
+        
+    finally:
+        await conn.close()
+
+async def demo_manager_view(conn, manager_id: str, store_name: str):
+    """
+    Demonstrate what a specific store manager can see with RLS enabled.
+    """
+    # Set the manager context
+    await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+    
+    # Query orders (should only see orders from their store)
+    orders = await conn.fetchval(f"""
+        SELECT COUNT(*) FROM {SCHEMA_NAME}.orders
+    """)
+    
+    # Query customers with breakdown
+    direct_customers = await conn.fetchval(f"""
+        SELECT COUNT(*) FROM {SCHEMA_NAME}.customers 
+        WHERE primary_store_id IS NOT NULL
+    """)
+    
+    indirect_customers = await conn.fetchval(f"""
+        SELECT COUNT(*) FROM {SCHEMA_NAME}.customers 
+        WHERE primary_store_id IS NULL
+    """)
+    
+    total_customers = await conn.fetchval(f"""
+        SELECT COUNT(*) FROM {SCHEMA_NAME}.customers
+    """)
+    
+    # Query inventory (should only see their store's inventory)
+    inventory_items = await conn.fetchval(f"""
+        SELECT COUNT(*) FROM {SCHEMA_NAME}.inventory
+    """)
+    
+    # Get total revenue
+    total_revenue = await conn.fetchval(f"""
+        SELECT COALESCE(SUM(oi.total_amount), 0)
+        FROM {SCHEMA_NAME}.order_items oi
+        JOIN {SCHEMA_NAME}.orders o ON oi.order_id = o.order_id
+    """)
+    
+    print(f"  Manager ID: {manager_id}")
+    print(f"  Store: {store_name}")
+    print(f"  Visible Orders: {orders:,}")
+    print(f"  Visible Customers: {total_customers:,}")
+    print(f"    - Directly assigned: {direct_customers:,}")
+    print(f"    - Discovered via orders: {indirect_customers:,}")
+    print(f"  Visible Inventory Items: {inventory_items:,}")
+    print(f"  Total Revenue: ${total_revenue:,.2f}")
+
+async def test_customer_security():
+    """
+    Test the customer security model by demonstrating different access patterns.
+    """
+    conn = await create_connection()
+    
+    try:
+        print("\n" + "=" * 60)
+        print("CUSTOMER SECURITY MODEL TEST")
+        print("=" * 60)
+        
+        # Get store information
+        stores_info = await conn.fetch(f"""
+            SELECT s.store_name, s.manager_id,
+                   COUNT(c.customer_id) as assigned_customers
+            FROM {SCHEMA_NAME}.stores s
+            LEFT JOIN {SCHEMA_NAME}.customers c ON s.store_id = c.primary_store_id
+            GROUP BY s.store_id, s.store_name, s.manager_id
+            ORDER BY assigned_customers DESC
+        """)
+        
+        print("\nCustomer assignment summary:")
+        for store in stores_info:
+            print(f"  {store['store_name']}: {store['assigned_customers']:,} directly assigned customers")
+        
+        # Test with the first store
+        if stores_info:
+            test_store = stores_info[0]
+            print(f"\n--- Testing access for {test_store['store_name']} ---")
+            
+            # Set manager context
+            await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", test_store['manager_id'])
+            
+            # Test direct customer access
+            direct_access = await conn.fetch(f"""
+                SELECT customer_id, first_name, last_name, email, primary_store_id
+                FROM {SCHEMA_NAME}.customers 
+                WHERE primary_store_id IS NOT NULL
+                LIMIT 3
+            """)
+            
+            print("  Direct customer access (assigned to store):")
+            for customer in direct_access:
+                print(f"    - {customer['first_name']} {customer['last_name']} ({customer['email']}) - Store ID: {customer['primary_store_id']}")
+            
+            # Test indirect customer access (through orders)
+            indirect_access = await conn.fetch(f"""
+                SELECT DISTINCT c.customer_id, c.first_name, c.last_name, c.email, c.primary_store_id
+                FROM {SCHEMA_NAME}.customers c
+                WHERE c.primary_store_id IS NULL
+                LIMIT 3
+            """)
+            
+            if indirect_access:
+                print("  Indirect customer access (discovered via orders):")
+                for customer in indirect_access:
+                    store_ref = customer['primary_store_id'] if customer['primary_store_id'] else "No primary store"
+                    print(f"    - {customer['first_name']} {customer['last_name']} ({customer['email']}) - {store_ref}")
+            else:
+                print("  No indirect customers visible (haven't ordered from this store)")
+            
+            # Test with a different manager
+            if len(stores_info) > 1:
+                other_store = stores_info[1]
+                print(f"\n--- Switching to {other_store['store_name']} ---")
+                await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", other_store['manager_id'])
+                
+                visible_customers = await conn.fetchval(f"SELECT COUNT(*) FROM {SCHEMA_NAME}.customers")
+                print(f"  Customers visible to {other_store['store_name']} manager: {visible_customers:,}")
+        
+        print("\n" + "=" * 60)
+        print("CUSTOMER SECURITY TEST COMPLETE")
+        print("=" * 60)
+        
+    finally:
+        await conn.close()
+
+async def set_manager_context(manager_id: str):
+    """
+    Helper function to set the manager context for RLS.
+    
+    Usage in your application:
+        await set_manager_context("12345678-1234-1234-1234-123456789012")
+    """
+    conn = await create_connection()
+    try:
+        await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+        print(f"Manager context set to: {manager_id}")
+    finally:
+        await conn.close()
+
+async def get_manager_ids():
+    """
+    Helper function to get all manager IDs for workshop use.
+    
+    Returns a dictionary mapping store names to manager IDs.
+    """
+    conn = await create_connection()
+    try:
+        stores = await conn.fetch(f"""
+            SELECT store_name, manager_id::text as manager_id
+            FROM {SCHEMA_NAME}.stores 
+            ORDER BY store_name
+        """)
+        return {store['store_name']: store['manager_id'] for store in stores}
+    finally:
+        await conn.close()
+
+
+# Workshop example usage:
+#
+# 1. Get manager IDs:
+#    manager_ids = asyncio.run(get_manager_ids())
+#    print(manager_ids)
+#
+# 2. Demo RLS:
+#    asyncio.run(demo_row_level_security())
+#
+# 3. Set context in your app:
+#    asyncio.run(set_manager_context("your-manager-id-here"))
+#
+# 4. Then all subsequent queries will be filtered by RLS policies

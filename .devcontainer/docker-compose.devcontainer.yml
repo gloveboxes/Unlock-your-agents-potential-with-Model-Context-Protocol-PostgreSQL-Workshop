@@ -16,6 +16,6 @@ services:
       - ENVIRONMENT=container
       - postgres_host=db
       - postgres_port=5432
-      - postgres_user=postgres
-      - postgres_password=P@ssw0rd!
+      - postgres_user=store_manager
+      - postgres_password=StoreManager123!
       - postgres_db=zava

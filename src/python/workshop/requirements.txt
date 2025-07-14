@@ -13,3 +13,4 @@ pandas>=2.3.0,<3.0.0
 python-dotenv>=1.1.1,<2.0.0
 python-multipart>=0.0.20, <0.0.30
 uvicorn[standard]>=0.35.0,<0.36.0
+Faker>=37.4.0, <38.0.0

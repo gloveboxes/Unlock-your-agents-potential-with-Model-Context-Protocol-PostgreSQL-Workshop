@@ -226,7 +226,7 @@ workshop/
 │   └── utilities.py             # Common utilities
 ├── src/shared/                   # Shared resources
 │   ├── database/                # Database files and tools
-│   │   ├── zava_retail_2025_05_27_postgres.backup  # Database backup
+│   │   ├── zava_retail_2025_07_14_postgres_rls.backup  # Database backup
 │   │   └── data-generator/      # Database generation scripts
 │   │       ├── generate_zava_postgres.py  # PostgreSQL generator
 │   │       ├── generate_customer_db.py    # SQLite generator (legacy)

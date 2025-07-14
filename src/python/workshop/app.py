@@ -40,6 +40,7 @@ Utilities.suppress_logs()
 
 # Agent Instructions
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
+MAP_MCP_FUNCTIONS = True
 
 RESPONSE_TIMEOUT_SECONDS = 60
 
@@ -99,7 +100,8 @@ class AgentManager:
             )
 
             # Setup tools
-            # await self._setup_tools()
+            if MAP_MCP_FUNCTIONS:
+                await self._setup_tools()
 
             # Enable Azure Monitor Telemetry
             configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())

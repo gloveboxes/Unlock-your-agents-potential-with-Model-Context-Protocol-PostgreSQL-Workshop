@@ -42,7 +42,8 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 
 
 # Create MCP server with lifespan support
-mcp = FastMCP("mcp-zava-sales-devcontainer", lifespan=app_lifespan, stateless_http=True)
+mcp = FastMCP("mcp-zava-sales-devcontainer",
+              lifespan=app_lifespan, stateless_http=True)
 
 
 def get_db_provider() -> PostgreSQLSchemaProvider:
@@ -54,12 +55,12 @@ def get_db_provider() -> PostgreSQLSchemaProvider:
     raise RuntimeError("Invalid lifespan context type")
 
 
-async def get_table_schema(table_name: str) -> str:
+async def get_table_schema(table_name: str, manager_id:str) -> str:
     """Returns the complete schema information for a table."""
 
     try:
         provider = get_db_provider()
-        schema_info = await provider.get_table_metadata_string(table_name)
+        schema_info = await provider.get_table_metadata_string(table_name, manager_id=manager_id)
         return f"\n\n{schema_info}"
     except Exception as e:
         return f"Error retrieving {table_name} table schema: {e!s}"
@@ -73,6 +74,7 @@ async def get_multiple_table_schemas(
             description="List of table names. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'."
         ),
     ],
+    manager_id: Annotated[str, Field(description="PostgreSQL Manager ID required for Record Level Security (RLS).")],
 ) -> str:
     """
     Retrieve schemas for multiple tables in one call. Use this tool only for schemas you have not already fetched during the conversation.
@@ -102,12 +104,13 @@ async def get_multiple_table_schemas(
     if invalid_tables:
         return f"Error: Invalid table names: {invalid_tables}. Valid tables are: {sorted(valid_tables)}"
 
+    print(f"Manager ID: {manager_id}")
     print(f"Retrieving schemas for tables: {', '.join(table_names)}")
 
     schemas = []
     for table_name in table_names:
         try:
-            schema_info = await get_table_schema(table_name)
+            schema_info = await get_table_schema(table_name, manager_id=manager_id)
             schemas.append(schema_info)
         except Exception as e:
             schemas.append(f"Error retrieving {table_name} schema: {e!s}")
@@ -118,6 +121,7 @@ async def get_multiple_table_schemas(
 @mcp.tool()
 async def execute_sales_query(
     postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")],
+    manager_id: Annotated[str, Field(description="PostgreSQL Manager ID required for Record Level Security (RLS).")],
 ) -> str:
     """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven't yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY. ALWAYS Limit the number of rows returned to 20 or fewer to avoid overwhelming the user with too much data and explain that results are limited for performance and readability.
 
@@ -127,13 +131,14 @@ async def execute_sales_query(
     Returns:
         Query results as a string.
     """
+    print(f"Manager ID: {manager_id}")
     print(f"Executing PostgreSQL query: {postgresql_query}")
     try:
         if not postgresql_query:
             return "Error: postgresql_query parameter is required"
 
         provider = get_db_provider()
-        result = await provider.execute_query(postgresql_query)
+        result = await provider.execute_query(postgresql_query, manager_id=manager_id)
         return f"Query Results:\n{result}"
 
     except Exception as e:
@@ -162,7 +167,8 @@ async def run_http_server() -> None:
     mcp.settings.port = 8010
     # mcp.settings.stateless_http = True
 
-    print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
+    print(
+        f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
 
     # Run the FastMCP server as HTTP endpoint
     await mcp.run_streamable_http_async()
@@ -171,7 +177,8 @@ async def run_http_server() -> None:
 def main() -> None:
     """Main entry point for the MCP server."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stdio", action="store_true", help="Run server in stdio mode")
+    parser.add_argument("--stdio", action="store_true",
+                        help="Run server in stdio mode")
     args = parser.parse_args()
 
     if args.stdio:

@@ -142,8 +142,8 @@ class MCPClient:
             # Create specific functions based on tool name to maintain correct signatures
             if tool_name == "execute_sales_query":
 
-                async def execute_sales_query(postgresql_query: str) -> str:
-                    return await self.call_tool_async("execute_sales_query", {"postgresql_query": postgresql_query})
+                async def execute_sales_query(postgresql_query: str, manager_id: str) -> str:
+                    return await self.call_tool_async("execute_sales_query", {"postgresql_query": postgresql_query, "manager_id": manager_id})
 
                 execute_sales_query.__name__ = tool_name
                 execute_sales_query.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
@@ -151,8 +151,8 @@ class MCPClient:
 
             elif tool_name == "get_multiple_table_schemas":
 
-                async def get_multiple_table_schemas(table_names: List[str]) -> str:
-                    return await self.call_tool_async("get_multiple_table_schemas", {"table_names": table_names})
+                async def get_multiple_table_schemas(table_names: List[str], manager_id: str) -> str:
+                    return await self.call_tool_async("get_multiple_table_schemas", {"table_names": table_names, "manager_id": manager_id})
 
                 get_multiple_table_schemas.__name__ = tool_name
                 get_multiple_table_schemas.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
