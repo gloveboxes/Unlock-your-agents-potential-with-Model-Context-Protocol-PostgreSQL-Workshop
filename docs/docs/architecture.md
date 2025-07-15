@@ -20,6 +20,7 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 
     The app is powered by the Zava Sales Database, a [Azure Database for PostgreSQL flexible server](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. The database includes:
 
+     - **8 stores** across Washington State, each with unique inventory and sales data
      - **50,000+ customer records** across Washington State and online
      - **400+ DIY products** including tools, outdoor equipment, and home improvement supplies
      - **400+ product images** linked to the database for image-based searches
@@ -27,6 +28,7 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
      - **3000+ inventory items** across multiple stores
      - **Vector embeddings** for product images enabling AI-powered similarity searches (encoded using [openai/clip-vit-base-patch32](https://huggingface.co/openai/clip-vit-base-patch32/blob/main/README.md){:target="_blank"})
 
+     The database supports complex queries and analytics, enabling efficient access to sales, inventory, and customer data. PostgreSQL Row Level Security (RLS) restricts agents to only the data for their assigned stores, ensuring security and privacy.
 
      The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
 
