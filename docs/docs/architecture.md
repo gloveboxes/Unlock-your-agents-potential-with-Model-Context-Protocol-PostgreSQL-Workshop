@@ -22,8 +22,11 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 
      - **50,000+ customer records** across Washington State and online
      - **400+ DIY products** including tools, outdoor equipment, and home improvement supplies
+     - **400+ product images** linked to the database for image-based searches
      - **200,000+ order transactions** with detailed sales history
+     - **3000+ inventory items** across multiple stores
      - **Vector embeddings** for product images enabling AI-powered similarity searches
+
 
      The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
 
