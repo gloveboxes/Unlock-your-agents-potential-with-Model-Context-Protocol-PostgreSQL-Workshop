@@ -17,7 +17,7 @@ builder.AddUvicornApp("chat-frontend", Path.Combine(Environment.CurrentDirectory
     .WithEnvironment("AZURE_OPENAI_ENDPOINT", foundry)
     .WithEnvironment("AZURE_OPENAI_DEPLOYMENT", chatDeployment);
 
-builder.AddUvicornApp("python-mcp-server", Path.Combine(Environment.CurrentDirectory, "..", "..", "python", "workshop"), "app:app")
+builder.AddUvicornApp("python-mcp-server", Path.Combine(Environment.CurrentDirectory, "..", "..", "python", "mcp"), "mcp_server:mcp")
     .WithEnvironment("PG_HOST", () => zava.Resource.Parent.PrimaryEndpoint.Host)
     .WithEnvironment("PG_PORT", () => zava.Resource.Parent.PrimaryEndpoint.Port.ToString())
     .WithEnvironment("PG_USER", () => pg.Resource.UserNameParameter?.ToString() ?? "postgres")
