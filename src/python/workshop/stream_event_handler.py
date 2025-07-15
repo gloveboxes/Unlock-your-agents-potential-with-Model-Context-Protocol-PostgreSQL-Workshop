@@ -4,11 +4,14 @@ from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import (
     AsyncAgentEventHandler,
     MessageDeltaChunk,
+    RequiredMcpToolCall,
     RunStatus,
     RunStep,
     RunStepDeltaChunk,
+    SubmitToolApprovalAction,
     ThreadMessage,
     ThreadRun,
+    ToolApproval,
 )
 from utilities import Utilities
 
@@ -44,10 +47,37 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
 
     async def on_thread_run(self, run: ThreadRun) -> None:
         """Handle thread run events"""
+
+        print(f"Run status: {run.status}, ID: {run.id}")
         if run.status == RunStatus.FAILED:
             print(f"Run failed. Error: {run.last_error}")
             print(f"Thread ID: {run.thread_id}")
             print(f"Run ID: {run.id}")
+
+        if run.status == RunStatus.REQUIRES_ACTION and isinstance(run.required_action, SubmitToolApprovalAction):
+            print(f"run action required for run: {run.id}")
+            tool_calls = run.required_action.submit_tool_approval.tool_calls
+            if not tool_calls:
+                print("No tool calls provided - cancelling run")
+                return
+            tool_approvals = []
+            for tool_call in tool_calls:
+                if isinstance(tool_call, RequiredMcpToolCall):
+                    try:
+                        print(f"Approving tool call: {tool_call}")
+                        tool_approvals.append(
+                            ToolApproval(
+                                tool_call_id=tool_call.id,
+                                approve=True,
+                            )
+                        )
+                    except Exception as e:
+                        print(f"Error approving tool_call {tool_call.id}: {e}")
+
+            if tool_approvals:
+                await self.agents_client.runs.submit_tool_outputs(
+                    thread_id=run.thread_id, run_id=run.id, tool_approvals=tool_approvals
+                )
 
     async def on_run_step(self, step: RunStep) -> None:
         pass

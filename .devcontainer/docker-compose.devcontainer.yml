@@ -14,8 +14,4 @@ services:
         condition: service_healthy
     environment:
       - ENVIRONMENT=container
-      - postgres_host=db
-      - postgres_port=5432
-      - postgres_user=store_manager
-      - postgres_password=StoreManager123!
-      - postgres_db=zava
+      - POSTGRES_URL=postgresql://store_manager:StoreManager123!@db:5432/zava

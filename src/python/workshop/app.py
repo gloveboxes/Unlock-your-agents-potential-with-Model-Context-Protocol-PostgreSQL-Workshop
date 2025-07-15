@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool
+from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool, McpTool
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
 from chat_service import ChatRequest, ChatStreamingService
@@ -48,8 +48,12 @@ tracer = trace.get_tracer("zava_agent.tracing")
 mcp_client = MCPClient.create_default()
 
 tools = [
-    {"type": "mcp", "server_label": "ZavaMcpServer", "server_url": Config.DEV_TUNNEL_URL, "require_approval": "never"},
     {"type": "code_interpreter"},
+    {
+        "type": "mcp",
+        "server_label": "ZavaMcpServer",
+        "server_url": Config.DEV_TUNNEL_URL,
+    },
 ]
 
 
@@ -59,8 +63,23 @@ class AgentManager:
     async def _setup_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
 
-        mcp_tools = await mcp_client.build_function_tools()
-        self.toolset.add(mcp_tools)
+        if Config.MAP_MCP_FUNCTIONS:
+            mcp_tools = await mcp_client.build_function_tools()
+            self.toolset.add(mcp_tools)
+        else:
+            self.mcp_tools = McpTool(
+                server_label="ZavaMcpServer",
+                server_url="https://1rhz2hth-8010.aue.devtunnels.ms/mcp",
+                allowed_tools=[
+                    "get_multiple_table_schemas",
+                    "execute_sales_query",
+                    "get_current_utc_date",
+                ],  # Optional: specify allowed tools
+            )
+
+            # self.mcp_tools.set_approval_mode("never")  # Uncomment to disable approval requirement
+
+            self.toolset.add(self.mcp_tools)
 
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
@@ -73,6 +92,7 @@ class AgentManager:
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
+        self.mcp_tools = None
 
     async def initialize(self, instructions_file: str) -> bool:
         """Initialize the agent with tools and instructions."""
@@ -99,8 +119,8 @@ class AgentManager:
             )
 
             # Setup tools
-            if Config.MAP_MCP_FUNCTIONS:
-                await self._setup_tools()
+            print("Setting up MCP tools...")
+            await self._setup_tools()
 
             # Enable Azure Monitor Telemetry
             configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
@@ -114,14 +134,13 @@ class AgentManager:
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
-                    toolset=self.toolset if self.toolset.definitions else None,
-                    tools=tools if not self.toolset.definitions else None,
+                    toolset=self.toolset,
                     temperature=Config.TEMPERATURE,
                 )
                 print(f"Created agent, ID: {self.agent.id}")
 
                 # Enable auto function calls
-                if self.toolset.definitions:
+                if self.toolset.definitions and Config.MAP_MCP_FUNCTIONS:
                     self.agents_client.enable_auto_function_calls(tools=self.toolset)
                     print("Enabled auto function calls.")
 

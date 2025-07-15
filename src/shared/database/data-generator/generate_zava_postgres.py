@@ -155,7 +155,7 @@ async def create_database_schema(conn):
             CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.stores (
                 store_id SERIAL PRIMARY KEY,
                 store_name TEXT UNIQUE NOT NULL,
-                manager_id UUID NOT NULL DEFAULT gen_random_uuid(),
+                rls_user_id UUID NOT NULL DEFAULT gen_random_uuid(),
                 is_online BOOLEAN NOT NULL DEFAULT false
             )
         """)
@@ -348,13 +348,13 @@ async def create_database_schema(conn):
             FOR ALL TO PUBLIC
             USING (
                 -- Super manager has access to all rows
-                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                current_setting('app.current_rls_user_id', true) = '{SUPER_MANAGER_UUID}'
                 OR
                 -- Store managers can only see orders from their store
                 EXISTS (
                     SELECT 1 FROM {SCHEMA_NAME}.stores s 
                     WHERE s.store_id = {SCHEMA_NAME}.orders.store_id 
-                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                    AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
                 )
             )
         """)
@@ -366,13 +366,13 @@ async def create_database_schema(conn):
             FOR ALL TO PUBLIC
             USING (
                 -- Super manager has access to all rows
-                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                current_setting('app.current_rls_user_id', true) = '{SUPER_MANAGER_UUID}'
                 OR
                 -- Store managers can only see order items from their store
                 EXISTS (
                     SELECT 1 FROM {SCHEMA_NAME}.stores s 
                     WHERE s.store_id = {SCHEMA_NAME}.order_items.store_id 
-                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                    AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
                 )
             )
         """)
@@ -384,13 +384,13 @@ async def create_database_schema(conn):
             FOR ALL TO PUBLIC
             USING (
                 -- Super manager has access to all rows
-                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                current_setting('app.current_rls_user_id', true) = '{SUPER_MANAGER_UUID}'
                 OR
                 -- Store managers can only see their store's inventory
                 EXISTS (
                     SELECT 1 FROM {SCHEMA_NAME}.stores s 
                     WHERE s.store_id = {SCHEMA_NAME}.inventory.store_id 
-                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                    AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
                 )
             )
         """)
@@ -402,13 +402,13 @@ async def create_database_schema(conn):
             FOR ALL TO PUBLIC
             USING (
                 -- Super manager has access to all rows
-                current_setting('app.current_manager_id', true) = '{SUPER_MANAGER_UUID}'
+                current_setting('app.current_rls_user_id', true) = '{SUPER_MANAGER_UUID}'
                 OR
                 -- Store managers can only see customers assigned to their store
                 EXISTS (
                     SELECT 1 FROM {SCHEMA_NAME}.stores s 
                     WHERE s.store_id = {SCHEMA_NAME}.customers.primary_store_id 
-                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                    AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
                 )
                 OR
                 -- Also allow access to customers who have ordered from their store (backward compatibility)
@@ -416,7 +416,7 @@ async def create_database_schema(conn):
                     SELECT 1 FROM {SCHEMA_NAME}.orders o
                     JOIN {SCHEMA_NAME}.stores s ON o.store_id = s.store_id
                     WHERE o.customer_id = {SCHEMA_NAME}.customers.customer_id
-                    AND s.manager_id::text = current_setting('app.current_manager_id', true)
+                    AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
                 )
             )
         """)
@@ -510,7 +510,7 @@ async def setup_store_manager_permissions(conn):
         logging.info("Store manager can now:")
         logging.info("  - Access the retail schema")
         logging.info("  - SELECT, INSERT, UPDATE, DELETE on all tables")
-        logging.info("  - Row Level Security policies will filter data based on manager_id")
+        logging.info("  - Row Level Security policies will filter data based on rls_user_id")
         
     except Exception as e:
         logging.error(f"Error setting up store_manager permissions: {e}")
@@ -599,10 +599,10 @@ async def insert_stores(conn):
         await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.stores (store_name, is_online) VALUES ($1, $2)", stores_data)
         
         # Log the manager IDs for workshop purposes
-        rows = await conn.fetch(f"SELECT store_name, manager_id FROM {SCHEMA_NAME}.stores ORDER BY store_name")
+        rows = await conn.fetch(f"SELECT store_name, rls_user_id FROM {SCHEMA_NAME}.stores ORDER BY store_name")
         logging.info("Store Manager IDs (for workshop use):")
         for row in rows:
-            logging.info(f"  {row['store_name']}: {row['manager_id']}")
+            logging.info(f"  {row['store_name']}: {row['rls_user_id']}")
         
         logging.info(f"Successfully inserted {len(stores_data):,} stores!")
     except Exception as e:
@@ -1727,7 +1727,7 @@ async def demo_row_level_security():
     try:
         # Get all stores and their manager IDs
         stores_info = await conn.fetch(f"""
-            SELECT store_name, manager_id 
+            SELECT store_name, rls_user_id 
             FROM {SCHEMA_NAME}.stores 
             ORDER BY store_name
         """)
@@ -1738,7 +1738,7 @@ async def demo_row_level_security():
         
         print("\nAvailable stores and their manager IDs:")
         for store in stores_info:
-            print(f"  {store['store_name']}: {store['manager_id']}")
+            print(f"  {store['store_name']}: {store['rls_user_id']}")
         
         # Demo with first two stores
         if len(stores_info) >= 2:
@@ -1746,10 +1746,10 @@ async def demo_row_level_security():
             store2 = stores_info[1]
             
             print(f"\n--- Demonstrating RLS for {store1['store_name']} ---")
-            await demo_manager_view(conn, store1['manager_id'], store1['store_name'])
+            await demo_manager_view(conn, store1['rls_user_id'], store1['store_name'])
             
             print(f"\n--- Demonstrating RLS for {store2['store_name']} ---")
-            await demo_manager_view(conn, store2['manager_id'], store2['store_name'])
+            await demo_manager_view(conn, store2['rls_user_id'], store2['store_name'])
             
         print("\n" + "=" * 60)
         print("RLS DEMONSTRATION COMPLETE")
@@ -1758,12 +1758,12 @@ async def demo_row_level_security():
     finally:
         await conn.close()
 
-async def demo_manager_view(conn, manager_id: str, store_name: str):
+async def demo_manager_view(conn, rls_user_id: str, store_name: str):
     """
     Demonstrate what a specific store manager can see with RLS enabled.
     """
     # Set the manager context
-    await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+    await conn.execute("SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
     
     # Query orders (should only see orders from their store)
     orders = await conn.fetchval(f"""
@@ -1797,7 +1797,7 @@ async def demo_manager_view(conn, manager_id: str, store_name: str):
         JOIN {SCHEMA_NAME}.orders o ON oi.order_id = o.order_id
     """)
     
-    print(f"  Manager ID: {manager_id}")
+    print(f"  Manager ID: {rls_user_id}")
     print(f"  Store: {store_name}")
     print(f"  Visible Orders: {orders:,}")
     print(f"  Visible Customers: {total_customers:,}")
@@ -1819,11 +1819,11 @@ async def test_customer_security():
         
         # Get store information
         stores_info = await conn.fetch(f"""
-            SELECT s.store_name, s.manager_id,
+            SELECT s.store_name, s.rls_user_id,
                    COUNT(c.customer_id) as assigned_customers
             FROM {SCHEMA_NAME}.stores s
             LEFT JOIN {SCHEMA_NAME}.customers c ON s.store_id = c.primary_store_id
-            GROUP BY s.store_id, s.store_name, s.manager_id
+            GROUP BY s.store_id, s.store_name, s.rls_user_id
             ORDER BY assigned_customers DESC
         """)
         
@@ -1837,7 +1837,7 @@ async def test_customer_security():
             print(f"\n--- Testing access for {test_store['store_name']} ---")
             
             # Set manager context
-            await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", test_store['manager_id'])
+            await conn.execute("SELECT set_config('app.current_rls_user_id', $1, false)", test_store['rls_user_id'])
             
             # Test direct customer access
             direct_access = await conn.fetch(f"""
@@ -1871,7 +1871,7 @@ async def test_customer_security():
             if len(stores_info) > 1:
                 other_store = stores_info[1]
                 print(f"\n--- Switching to {other_store['store_name']} ---")
-                await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", other_store['manager_id'])
+                await conn.execute("SELECT set_config('app.current_rls_user_id', $1, false)", other_store['rls_user_id'])
                 
                 visible_customers = await conn.fetchval(f"SELECT COUNT(*) FROM {SCHEMA_NAME}.customers")
                 print(f"  Customers visible to {other_store['store_name']} manager: {visible_customers:,}")
@@ -1883,7 +1883,7 @@ async def test_customer_security():
     finally:
         await conn.close()
 
-async def set_manager_context(manager_id: str):
+async def set_manager_context(rls_user_id: str):
     """
     Helper function to set the manager context for RLS.
     
@@ -1892,8 +1892,8 @@ async def set_manager_context(manager_id: str):
     """
     conn = await create_connection()
     try:
-        await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", manager_id)
-        print(f"Manager context set to: {manager_id}")
+        await conn.execute("SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
+        print(f"Manager context set to: {rls_user_id}")
     finally:
         await conn.close()
 
@@ -1906,11 +1906,11 @@ async def get_manager_ids():
     conn = await create_connection()
     try:
         stores = await conn.fetch(f"""
-            SELECT store_name, manager_id::text as manager_id
+            SELECT store_name, rls_user_id::text as rls_user_id
             FROM {SCHEMA_NAME}.stores 
             ORDER BY store_name
         """)
-        return {store['store_name']: store['manager_id'] for store in stores}
+        return {store['store_name']: store['rls_user_id'] for store in stores}
     finally:
         await conn.close()
 

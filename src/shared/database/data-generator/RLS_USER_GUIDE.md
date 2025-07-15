@@ -85,8 +85,8 @@ The store_manager user has RLS policies applied, so you'll only see data for sto
 Before querying, you need to set which store manager you're acting as:
 
 ```sql
--- Set the manager context (use any manager_id from the stores table)
-SELECT set_config('app.current_manager_id', '741421a9-0bb8-47bd-9aa3-29162e361fd8', false);
+-- Set the manager context (use any rls_user_id from the stores table)
+SELECT set_config('app.current_rls_user_id', '741421a9-0bb8-47bd-9aa3-29162e361fd8', false);
 ```
 
 ### Step 3: Query with RLS Applied
@@ -108,14 +108,14 @@ SELECT * FROM retail.inventory LIMIT 10;
 Run this query to see all available manager IDs:
 
 ```sql
-SELECT store_id, store_name, manager_id, is_online
+SELECT store_id, store_name, rls_user_id, is_online
 FROM retail.stores
 ORDER BY store_name;
 ```
 
 Example output:
 ```
-store_id |      store_name      |              manager_id              | is_online
+store_id |      store_name      |              rls_user_id              | is_online
 ---------+----------------------+--------------------------------------+-----------
       1  | Zava Retail Bellevue | efb77123-0003-45d0-86a5-af068b6cb13f | f
       2  | Zava Retail Everett  | deec7d60-8058-4c7f-b33b-41d1cc1c4db3 | f
@@ -155,7 +155,7 @@ The following tables have RLS policies applied:
 ### Issue: Getting 0 results when querying
 **Solution**: Make sure you've set the manager context:
 ```sql
-SELECT set_config('app.current_manager_id', 'YOUR_MANAGER_ID_HERE', false);
+SELECT set_config('app.current_rls_user_id', 'YOUR_MANAGER_ID_HERE', false);
 ```
 
 ### Issue: RLS not working (seeing all data)
@@ -183,7 +183,7 @@ async def test_rls():
     
     # Set manager context
     await conn.execute(
-        "SELECT set_config('app.current_manager_id', $1, false)", 
+        "SELECT set_config('app.current_rls_user_id', $1, false)", 
         '741421a9-0bb8-47bd-9aa3-29162e361fd8'  # Seattle store manager
     )
     

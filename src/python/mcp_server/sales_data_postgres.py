@@ -32,13 +32,7 @@ logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 # PostgreSQL connection configuration
-POSTGRES_CONFIG = {
-    "host": os.getenv("postgres_host", "db"),
-    "port": int(os.getenv("postgres_port", "5432")),
-    "user": os.getenv("postgres_user", "store_manager"),
-    "password": os.getenv("postgres_password", "StoreManager123!"),
-    "database": os.getenv("postgres_db", "zava"),
-}
+POSTGRES_URL = os.getenv("POSTGRES_URL", "postgresql://store_manager:StoreManager123!@db:5432/zava")
 
 SCHEMA_NAME = "retail"
 MANAGER_ID = ""
@@ -57,11 +51,11 @@ INVENTORY_TABLE = "inventory"
 class PostgreSQLSchemaProvider:
     """Provides PostgreSQL database schema information in AI-friendly formats for dynamic query generation."""
 
-    def __init__(self, postgres_config: Optional[Dict] = None) -> None:
-        self.postgres_config = postgres_config or POSTGRES_CONFIG
+    def __init__(self, postgres_config: Optional[str] = None) -> None:
+        self.postgres_config = postgres_config or POSTGRES_URL
         self.connection_pool: Optional[asyncpg.Pool] = None
         self.all_schemas: Optional[Dict[str, Dict[str, Any]]] = None
-        # In‑memory cache for per‑table schema look‑ups
+        # In-memory cache for per-table schema look-ups
         self._schema_cache: Dict[str, Any] = {}
 
     async def __aenter__(self) -> "PostgreSQLSchemaProvider":
@@ -77,7 +71,7 @@ class PostgreSQLSchemaProvider:
         if self.connection_pool is None:
             try:
                 self.connection_pool = await asyncpg.create_pool(
-                    **self.postgres_config,
+                    self.postgres_config,
                     min_size=1,  # Minimum connections in pool
                     max_size=3,  # Very conservative pool size
                     command_timeout=30,  # 30 second query timeout
@@ -89,16 +83,16 @@ class PostgreSQLSchemaProvider:
                 )
                 # Don't preload schemas here to avoid connection exhaustion
                 logger.info(
-                    f"✅ PostgreSQL connection pool created: {self.postgres_config['host']}:{self.postgres_config['port']}/{self.postgres_config['database']}"
+                    f"✅ PostgreSQL connection pool created: {self.postgres_config}"
                 )
             except Exception as e:
                 logger.error(f"❌ Failed to create PostgreSQL pool: {e}")
                 raise
 
-    async def ensure_schemas_loaded(self, schema_name: str, manager_id:str) -> None:
+    async def ensure_schemas_loaded(self, schema_name: str, rls_user_id:str) -> None:
         """Ensure schemas are loaded for the specified schema, loading them if not already cached."""
         if self.all_schemas is None:
-            self.all_schemas = await self.get_all_schemas(schema_name, manager_id=manager_id)
+            self.all_schemas = await self.get_all_schemas(schema_name, rls_user_id=rls_user_id)
 
     async def close_pool(self) -> None:
         """Close connection pool and cleanup."""
@@ -235,7 +229,7 @@ class PostgreSQLSchemaProvider:
             else "one_to_many"
         )
 
-    async def get_table_schema(self, table_name: str, manager_id: str) -> Dict[str, Any]:
+    async def get_table_schema(self, table_name: str, rls_user_id: str) -> Dict[str, Any]:
         """Return schema information for a given table."""
         # Return cached version if available
         if table_name in self._schema_cache:
@@ -251,7 +245,7 @@ class PostgreSQLSchemaProvider:
             conn = await self.get_connection()
 
             await conn.execute(
-                "SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+                "SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
 
             # Get column information
             columns = await conn.fetch(
@@ -406,14 +400,14 @@ class PostgreSQLSchemaProvider:
             if conn:
                 await self.release_connection(conn)
 
-    async def get_all_schemas(self, schema_name: str, manager_id:str) -> Dict[str, Dict[str, Any]]:
+    async def get_all_schemas(self, schema_name: str, rls_user_id:str) -> Dict[str, Dict[str, Any]]:
         """Get schema metadata for all tables in the specified schema."""
         table_names = await self.get_all_table_names(schema_name)
         result = {}
         for table_name in table_names:
             # Store schema with qualified name using the specified schema
             qualified_name = f"{schema_name}.{table_name}"
-            schema_data = await self.get_table_schema(qualified_name, manager_id=manager_id)
+            schema_data = await self.get_table_schema(qualified_name, rls_user_id=rls_user_id)
             # Cache by table name only for lookup
             result[table_name] = schema_data
         return result
@@ -493,21 +487,203 @@ class PostgreSQLSchemaProvider:
 
         return "\n".join(lines) + "\n"
 
-    async def get_table_metadata_string(self, table_name: str, manager_id: str) -> str:
+    async def get_table_metadata_string(self, table_name: str, rls_user_id: str) -> str:
         """Return formatted schema metadata string for a single table."""
         # Always get fresh schema data for the specific table
         # This ensures we use the schema from the FQN rather than relying on cached data
-        schema = await self.get_table_schema(table_name, manager_id=manager_id)
+        schema = await self.get_table_schema(table_name, rls_user_id=rls_user_id)
         return self.format_schema_metadata_for_ai(schema)
 
-    async def execute_query(self, sql_query: str, manager_id: str) -> str:
+    async def get_table_metadata_from_list(self, table_names: List[str], rls_user_id: str) -> str:
+        """Return formatted schema metadata strings for multiple tables efficiently using a single connection."""
+        if not table_names:
+            return "Error: table_names parameter is required and cannot be empty"
+
+        conn = None
+        try:
+            conn = await self.get_connection()
+            
+            # Set rls_user_id once for the connection
+            await conn.execute(
+                "SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
+
+            schemas = []
+            for table_name in table_names:
+                try:
+                    # Check if table exists first
+                    schema_name, parsed_table_name = self._parse_table_name(table_name)
+                    table_exists_result = await conn.fetchval(
+                        """SELECT EXISTS (
+                            SELECT 1 FROM information_schema.tables 
+                            WHERE table_schema = $1 AND table_name = $2
+                        )""",
+                        schema_name,
+                        parsed_table_name,
+                    )
+                    
+                    if not table_exists_result:
+                        schemas.append(f"**ERROR:** Table '{table_name}' not found\n")
+                        continue
+
+                    # Get schema data efficiently within the same connection
+                    # Use the original method but with our existing connection
+                    schema_data = await self._get_table_metadata(conn, table_name)
+                    formatted_schema = self.format_schema_metadata_for_ai(schema_data)
+                    schemas.append(f"\n\n{formatted_schema}")
+                    
+                except Exception as e:
+                    schemas.append(f"Error retrieving {table_name} schema: {e!s}\n")
+
+            return "".join(schemas)
+
+        finally:
+            if conn:
+                await self.release_connection(conn)
+
+    async def _get_table_metadata(self, conn: asyncpg.Connection, table_name: str) -> Dict[str, Any]:
+        """Get table schema using an existing connection for efficiency."""
+        # Return cached version if available
+        if table_name in self._schema_cache:
+            return self._schema_cache[table_name]
+
+        schema_name, parsed_table_name = self._parse_table_name(table_name)
+
+        # Get column information
+        columns = await conn.fetch(
+            """SELECT 
+                column_name,
+                data_type,
+                is_nullable,
+                column_default,
+                ordinal_position
+            FROM information_schema.columns 
+            WHERE table_schema = $1 AND table_name = $2
+            ORDER BY ordinal_position""",
+            schema_name,
+            parsed_table_name,
+        )
+
+        # Get primary key information
+        primary_keys = await conn.fetch(
+            """SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu 
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+            WHERE tc.constraint_type = 'PRIMARY KEY'
+                AND tc.table_schema = $1 
+                AND tc.table_name = $2""",
+            schema_name,
+            parsed_table_name,
+        )
+
+        pk_columns = {row["column_name"] for row in primary_keys}
+
+        # Get foreign key information
+        foreign_keys = await conn.fetch(
+            """SELECT 
+                kcu.column_name,
+                ccu.table_name AS foreign_table_name,
+                ccu.column_name AS foreign_column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu 
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage ccu 
+                ON ccu.constraint_name = tc.constraint_name
+                AND ccu.table_schema = tc.table_schema
+            WHERE tc.constraint_type = 'FOREIGN KEY'
+                AND tc.table_schema = $1 
+                AND tc.table_name = $2""",
+            schema_name,
+            parsed_table_name,
+        )
+
+        columns_format = ", ".join(
+            f"{col['column_name']}:{col['data_type']}" for col in columns)
+        lower_table = parsed_table_name.lower()
+
+        # Define enum queries for each table to get unique values
+        enum_queries = {
+            STORES_TABLE: {"available_stores": ("store_name", f"{schema_name}.{STORES_TABLE}")},
+            CATEGORIES_TABLE: {"available_categories": ("category_name", f"{schema_name}.{CATEGORIES_TABLE}")},
+            PRODUCT_TYPES_TABLE: {"available_product_types": ("type_name", f"{schema_name}.{PRODUCT_TYPES_TABLE}")},
+            PRODUCTS_TABLE: {
+                # Removed available_product_names to avoid lengthy output
+            },
+            ORDERS_TABLE: {
+                "available_years": ("EXTRACT(YEAR FROM order_date)::text", f"{schema_name}.{ORDERS_TABLE}")
+            },
+            ORDER_ITEMS_TABLE: {
+                # "price_range": ("unit_price", f"{schema_name}.{ORDER_ITEMS_TABLE}")
+            },
+        }
+
+        enum_data = {}
+        if lower_table in enum_queries:
+            for key, (column, qualified_table) in enum_queries[lower_table].items():
+                try:
+                    if key == "available_years":
+                        # Handle years specially
+                        rows = await conn.fetch(
+                            f"SELECT DISTINCT {column} as year FROM {qualified_table} WHERE order_date IS NOT NULL ORDER BY year"
+                        )
+                        years = [str(row["year"])
+                                 for row in rows if row["year"]]
+                        enum_data[key] = years
+                    else:
+                        # Use existing connection for fetch_distinct_values-like operation
+                        rows = await conn.fetch(
+                            f"SELECT DISTINCT {column} FROM {qualified_table} WHERE {column} IS NOT NULL ORDER BY {column}"
+                        )
+                        enum_data[key] = [row[0] for row in rows if row[0]]
+                except Exception as e:
+                    logger.debug(
+                        f"Failed to fetch {key} for {qualified_table}: {e}")
+                    enum_data[key] = []
+
+        schema_data = {
+            # Keep the original input (may include schema)
+            "table_name": table_name,
+            "parsed_table_name": parsed_table_name,  # Just the table name
+            "schema_name": schema_name,  # The schema name
+            "description": f"Table containing {parsed_table_name} data",
+            "columns_format": columns_format,
+            "columns": [
+                {
+                    "name": col["column_name"],
+                    "type": col["data_type"],
+                    "primary_key": col["column_name"] in pk_columns,
+                    "required": col["is_nullable"] == "NO",
+                    "default_value": col["column_default"],
+                }
+                for col in columns
+            ],
+            "foreign_keys": [
+                {
+                    "column": fk["column_name"],
+                    "references_table": fk["foreign_table_name"],
+                    "references_column": fk["foreign_column_name"],
+                    "description": f"{fk['column_name']} links to {fk['foreign_table_name']}.{fk['foreign_column_name']}",
+                    "relationship_type": self.infer_relationship_type(f"{schema_name}.{fk['foreign_table_name']}"),
+                }
+                for fk in foreign_keys
+            ],
+        }
+
+        schema_data.update(enum_data)
+        # Cache result for future calls
+        self._schema_cache[table_name] = schema_data
+        return schema_data
+
+    async def execute_query(self, sql_query: str, rls_user_id: str) -> str:
         """Execute a SQL query and return results in LLM-friendly JSON format."""
         conn = None
         try:
             conn = await self.get_connection()
 
             await conn.execute(
-                "SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+                "SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
 
             # logger.info(f"\n🔍 Executing PostgreSQL query: {sql_query}\n")
             rows = await conn.fetch(sql_query)
@@ -550,7 +726,7 @@ async def test_connection() -> bool:
     """Test PostgreSQL connection and return success status."""
     try:
         # Create a temporary pool for testing
-        pool = await asyncpg.create_pool(**POSTGRES_CONFIG, min_size=1, max_size=1)
+        pool = await asyncpg.create_pool(POSTGRES_URL, min_size=1, max_size=1)
         conn = await pool.acquire()
         await pool.release(conn)
         await pool.close()
@@ -568,11 +744,11 @@ async def main() -> None:
     # Test connection first
     if not await test_connection():
         logger.error(
-            f"❌ Error: Cannot connect to PostgreSQL at {POSTGRES_CONFIG['host']}:{POSTGRES_CONFIG['port']}")
+            f"❌ Error: Cannot connect to PostgreSQL using: {POSTGRES_URL}")
         logger.error("   Please verify:")
         logger.error("   1. PostgreSQL is running")
         logger.error("   2. Database 'zava' exists")
-        logger.error("   3. Connection parameters in .env file are correct")
+        logger.error("   3. POSTGRES_URL environment variable is correct")
         logger.error("   4. User has access to the retail schema")
         return
 
@@ -582,7 +758,7 @@ async def main() -> None:
             await provider.create_pool()
 
             # Preload schemas for testing
-            await provider.ensure_schemas_loaded(SCHEMA_NAME, manager_id=MANAGER_ID)
+            await provider.ensure_schemas_loaded(SCHEMA_NAME, rls_user_id=MANAGER_ID)
 
             logger.info(
                 f"\n📋 Getting all table schemas from {SCHEMA_NAME} schema...")
@@ -599,15 +775,15 @@ async def main() -> None:
             logger.info("=" * 50)
 
             logger.info("\n📊 Test 1: Count all customers")
-            result = await provider.execute_query(f"SELECT COUNT(*) as total_customers FROM {SCHEMA_NAME}.customers", manager_id=MANAGER_ID)
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_customers FROM {SCHEMA_NAME}.customers", rls_user_id=MANAGER_ID)
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 2: Count stores")
-            result = await provider.execute_query(f"SELECT COUNT(*) as total_stores FROM {SCHEMA_NAME}.stores", manager_id=MANAGER_ID)
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_stores FROM {SCHEMA_NAME}.stores", rls_user_id=MANAGER_ID)
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 3: Count categories and types")
-            result = await provider.execute_query(f"SELECT COUNT(*) as total_categories FROM {SCHEMA_NAME}.categories", manager_id=MANAGER_ID)
+            result = await provider.execute_query(f"SELECT COUNT(*) as total_categories FROM {SCHEMA_NAME}.categories", rls_user_id=MANAGER_ID)
             logger.info(f"Result: {result}")
 
             logger.info("\n📊 Test 4: Orders with revenue")
@@ -616,7 +792,7 @@ async def main() -> None:
                     SUM(oi.total_amount) as revenue 
                     FROM {SCHEMA_NAME}.orders o 
                     JOIN {SCHEMA_NAME}.order_items oi ON o.order_id = oi.order_id 
-                    LIMIT 1""", manager_id=MANAGER_ID
+                    LIMIT 1""", rls_user_id=MANAGER_ID
             )
             logger.info(f"Result: {result}")
 
@@ -624,15 +800,18 @@ async def main() -> None:
             logger.info("=" * 50)
             print(f"\n📋 All table schemas in {SCHEMA_NAME} schema:\n")
 
-            # --- Use print for clean, user-facing schema info ---
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{STORES_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{CATEGORIES_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{PRODUCT_TYPES_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{PRODUCTS_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{CUSTOMERS_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{ORDERS_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{ORDER_ITEMS_TABLE}", manager_id=MANAGER_ID))
-            print(await provider.get_table_metadata_string(f"{SCHEMA_NAME}.{INVENTORY_TABLE}", manager_id=MANAGER_ID))
+            # --- Use the new efficient method for getting all schemas ---
+            all_table_names = [
+                f"{SCHEMA_NAME}.{STORES_TABLE}",
+                f"{SCHEMA_NAME}.{CATEGORIES_TABLE}",
+                f"{SCHEMA_NAME}.{PRODUCT_TYPES_TABLE}",
+                f"{SCHEMA_NAME}.{PRODUCTS_TABLE}",
+                f"{SCHEMA_NAME}.{CUSTOMERS_TABLE}",
+                f"{SCHEMA_NAME}.{ORDERS_TABLE}",
+                f"{SCHEMA_NAME}.{ORDER_ITEMS_TABLE}",
+                f"{SCHEMA_NAME}.{INVENTORY_TABLE}"
+            ]
+            print(await provider.get_table_metadata_from_list(all_table_names, rls_user_id=MANAGER_ID))
 
     except Exception as e:
         logger.error(f"❌ Error during analysis: {e}")

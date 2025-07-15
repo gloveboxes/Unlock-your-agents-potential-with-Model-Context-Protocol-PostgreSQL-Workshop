@@ -8,12 +8,12 @@ This PostgreSQL database implements Row Level Security (RLS) to ensure that stor
 
 ### Database Schema Changes
 
-1. **Store Table Enhanced**: Added `manager_id` (UUID) and `is_online` (boolean) columns
+1. **Store Table Enhanced**: Added `rls_user_id` (UUID) and `is_online` (boolean) columns
    ```sql
    CREATE TABLE retail.stores (
        store_id SERIAL PRIMARY KEY,
        store_name TEXT UNIQUE NOT NULL,
-       manager_id UUID NOT NULL DEFAULT gen_random_uuid(),
+       rls_user_id UUID NOT NULL DEFAULT gen_random_uuid(),
        is_online BOOLEAN NOT NULL DEFAULT false
    );
    ```
@@ -51,7 +51,7 @@ USING (
     EXISTS (
         SELECT 1 FROM retail.stores s 
         WHERE s.store_id = retail.customers.primary_store_id 
-        AND s.manager_id::text = current_setting('app.current_manager_id', true)
+        AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
     )
     OR
     -- Indirect relationship: customers who have ordered from this store
@@ -59,7 +59,7 @@ USING (
         SELECT 1 FROM retail.orders o
         JOIN retail.stores s ON o.store_id = s.store_id
         WHERE o.customer_id = retail.customers.customer_id
-        AND s.manager_id::text = current_setting('app.current_manager_id', true)
+        AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
     )
 );
 ```
@@ -82,7 +82,7 @@ USING (
     EXISTS (
         SELECT 1 FROM retail.stores s 
         WHERE s.store_id = retail.orders.store_id 
-        AND s.manager_id::text = current_setting('app.current_manager_id', true)
+        AND s.rls_user_id::text = current_setting('app.current_rls_user_id', true)
     )
 );
 ```
@@ -134,7 +134,7 @@ print(manager_ids)
 import asyncpg
 import asyncio
 
-async def query_as_manager(manager_id: str):
+async def query_as_manager(rls_user_id: str):
     conn = await asyncpg.connect(
         host='localhost', 
         database='zava', 
@@ -145,16 +145,16 @@ async def query_as_manager(manager_id: str):
     try:
         # Set the manager context - THIS IS THE KEY STEP
         await conn.execute(
-            "SELECT set_config('app.current_manager_id', $1, false)", 
-            manager_id
+            "SELECT set_config('app.current_rls_user_id', $1, false)", 
+            rls_user_id
         )
         
         # Now all queries will be filtered by RLS
         orders = await conn.fetch("SELECT * FROM retail.orders LIMIT 10")
         customers = await conn.fetch("SELECT * FROM retail.customers LIMIT 10")
         
-        print(f"Manager {manager_id} can see {len(orders)} orders")
-        print(f"Manager {manager_id} can see {len(customers)} customers")
+        print(f"Manager {rls_user_id} can see {len(orders)} orders")
+        print(f"Manager {rls_user_id} can see {len(customers)} customers")
         
     finally:
         await conn.close()
@@ -167,11 +167,11 @@ asyncio.run(query_as_manager("12345678-1234-1234-1234-123456789012"))
 
 ### Scenario 1: Store Manager Dashboard
 ```python
-async def store_manager_dashboard(manager_id: str):
+async def store_manager_dashboard(rls_user_id: str):
     conn = await create_connection()
     
     # Set manager context
-    await conn.execute("SELECT set_config('app.current_manager_id', $1, false)", manager_id)
+    await conn.execute("SELECT set_config('app.current_rls_user_id', $1, false)", rls_user_id)
     
     # Get dashboard data - all queries automatically filtered by RLS
     stats = await conn.fetchrow("""
@@ -194,8 +194,8 @@ async def store_manager_dashboard(manager_id: str):
 async def compare_managers():
     managers = await get_manager_ids()
     
-    for store_name, manager_id in managers.items():
-        stats = await store_manager_dashboard(manager_id)
+    for store_name, rls_user_id in managers.items():
+        stats = await store_manager_dashboard(rls_user_id)
         print(f"{store_name}: {stats['total_orders']} orders, ${stats['total_revenue']:,.2f} revenue")
 ```
 
@@ -236,7 +236,7 @@ python generate_zava_postgres.py --show-stats
 
 ### No Data Visible
 If queries return no results, check:
-1. Manager context is set: `SELECT current_setting('app.current_manager_id', true)`
+1. Manager context is set: `SELECT current_setting('app.current_rls_user_id', true)`
 2. Manager ID exists in stores table
 3. RLS policies are enabled: `SELECT * FROM pg_policies WHERE tablename = 'orders'`
 

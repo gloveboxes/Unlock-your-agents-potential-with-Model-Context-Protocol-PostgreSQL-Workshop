@@ -238,7 +238,7 @@ EOSQL
                 DROP POLICY IF EXISTS customers_manager_policy ON retail.customers;
                 CREATE POLICY customers_manager_policy ON retail.customers
                     FOR ALL TO store_manager
-                    USING (manager_id = current_setting('app.current_manager_id')::integer);
+                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
                 RAISE NOTICE 'Enabled RLS and recreated policy on customers table';
                 
                 -- Enable RLS on orders table and recreate policy
@@ -246,7 +246,7 @@ EOSQL
                 DROP POLICY IF EXISTS orders_manager_policy ON retail.orders;
                 CREATE POLICY orders_manager_policy ON retail.orders
                     FOR ALL TO store_manager
-                    USING (manager_id = current_setting('app.current_manager_id')::integer);
+                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
                 RAISE NOTICE 'Enabled RLS and recreated policy on orders table';
                 
                 -- Enable RLS on order_items table and recreate policy
@@ -257,7 +257,7 @@ EOSQL
                     USING (EXISTS (
                         SELECT 1 FROM retail.orders o 
                         WHERE o.order_id = order_items.order_id 
-                        AND o.manager_id = current_setting('app.current_manager_id')::integer
+                        AND o.rls_user_id = current_setting('app.current_rls_user_id')::integer
                     ));
                 RAISE NOTICE 'Enabled RLS and recreated policy on order_items table';
                 
@@ -266,7 +266,7 @@ EOSQL
                 DROP POLICY IF EXISTS inventory_manager_policy ON retail.inventory;
                 CREATE POLICY inventory_manager_policy ON retail.inventory
                     FOR ALL TO store_manager
-                    USING (manager_id = current_setting('app.current_manager_id')::integer);
+                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
                 RAISE NOTICE 'Enabled RLS and recreated policy on inventory table';
                 
                 RAISE NOTICE 'Successfully re-enabled RLS and recreated all policies';
