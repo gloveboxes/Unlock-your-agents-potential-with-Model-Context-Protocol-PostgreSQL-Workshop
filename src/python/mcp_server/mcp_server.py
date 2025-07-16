@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Annotated, Optional
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 from sales_data_postgres import PostgreSQLSchemaProvider
 
@@ -45,6 +45,20 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
 mcp = FastMCP("mcp-zava-sales", lifespan=app_lifespan, stateless_http=True)
 
 
+def get_header(ctx: Context, header_name: str) -> Optional[str]:
+    """Extract a specific header from the request context."""
+
+    headers = ctx.request_context.request.headers  # type: ignore
+    if headers:
+        header_value = headers.get(header_name)
+        if header_value is not None:
+            if isinstance(header_value, bytes):
+                return header_value.decode("utf-8")
+            return str(header_value)
+
+    return None
+
+
 def get_db_provider() -> PostgreSQLSchemaProvider:
     """Get the database provider instance from context."""
     ctx = mcp.get_context()
@@ -56,16 +70,13 @@ def get_db_provider() -> PostgreSQLSchemaProvider:
 
 @mcp.tool()
 async def get_multiple_table_schemas(
+    ctx: Context,
     table_names: Annotated[
         list[str],
         Field(
             description="List of table names. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'."
         ),
     ],
-    rls_user_id: Annotated[
-        Optional[str],
-        Field(description="PostgreSQL Record Level Security (RLS) User ID.", default=None),
-    ] = None,
 ) -> str:
     """
     Retrieve schemas for multiple tables. Use this tool only for schemas you have not already fetched during the conversation.
@@ -77,6 +88,9 @@ async def get_multiple_table_schemas(
     Returns:
         Concatenated schema strings for the requested tables.
     """
+
+    rls_user_id = get_header(ctx, "rls-user-id-header") or "00000000-0000-0000-0000-000000000000"
+
     if not table_names:
         return "Error: table_names parameter is required and cannot be empty"
 
@@ -96,8 +110,6 @@ async def get_multiple_table_schemas(
     if invalid_tables:
         return f"Error: Invalid table names: {invalid_tables}. Valid tables are: {sorted(valid_tables)}"
 
-    rls_user_id = rls_user_id or "00000000-0000-0000-0000-000000000000"
-
     print(f"Manager ID: {rls_user_id}")
     print(f"Retrieving schemas for tables: {', '.join(table_names)}")
 
@@ -110,11 +122,7 @@ async def get_multiple_table_schemas(
 
 @mcp.tool()
 async def execute_sales_query(
-    postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")],
-    rls_user_id: Annotated[
-        Optional[str],
-        Field(description="PostgreSQL Record Level Security (RLS) User ID.", default=None),
-    ] = None,
+    ctx: Context, postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")]
 ) -> str:
     """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven't yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY. ALWAYS Limit the number of rows returned to 20 or fewer to avoid overwhelming the user with too much data and explain that results are limited for performance and readability.
 
@@ -126,7 +134,7 @@ async def execute_sales_query(
         Query results as a string.
     """
 
-    rls_user_id = rls_user_id or "00000000-0000-0000-0000-000000000000"
+    rls_user_id = get_header(ctx, "rls-user-id-header") or "00000000-0000-0000-0000-000000000000"
 
     print(f"Manager ID: {rls_user_id}")
     print(f"Executing PostgreSQL query: {postgresql_query}")
@@ -164,8 +172,7 @@ async def run_http_server() -> None:
     mcp.settings.port = 8010
     # mcp.settings.stateless_http = True
 
-    print(
-        f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
+    print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
 
     # Run the FastMCP server as HTTP endpoint
     await mcp.run_streamable_http_async()
@@ -174,8 +181,7 @@ async def run_http_server() -> None:
 def main() -> None:
     """Main entry point for the MCP server."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stdio", action="store_true",
-                        help="Run server in stdio mode")
+    parser.add_argument("--stdio", action="store_true", help="Run server in stdio mode")
     args = parser.parse_args()
 
     if args.stdio:
