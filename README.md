@@ -27,7 +27,7 @@ This workshop demonstrates how to build such an agent from scratch, combining th
 ```text
 ┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
-│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server.py) │
+│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (sales_analysis_mcp_server.py) │
 │                     │    └─────────────────┘    └─────────────────┘
 │ ┌─────────────────┐ │                                   │
 │ │ Azure AI        │ │                                   ▼
@@ -218,7 +218,7 @@ workshop/
 ├── src/python/workshop/           # Main application code
 │   ├── main.py                   # Azure AI Agent orchestrator
 │   ├── mcp_client.py            # MCP client for tool communication
-│   ├── mcp_server.py            # MCP server with database tools
+│   ├── sales_analysis_mcp_server.py            # MCP server with database tools
 │   ├── sales_data_postgres.py   # PostgreSQL database access layer
 │   ├── config.py                # Configuration management
 │   ├── stream_event_handler.py  # Real-time streaming handler
@@ -265,7 +265,7 @@ Handles communication with MCP servers following the MCP specification:
 - **Function Mapping**: Maps MCP tools to Azure AI Agent functions
 - **Async Operations**: Full async support for optimal performance
 
-### MCP Server (mcp_server.py)
+### MCP Server (sales_analysis_mcp_server.py)
 
 Provides comprehensive database access tools:
 
@@ -553,7 +553,7 @@ docker-compose restart db
 
 **3. MCP Server Communication Errors**
 
-- Verify the MCP server starts correctly: `python mcp_server.py`
+- Verify the MCP server starts correctly: `python sales_analysis_mcp_server.py`
 - Check for Python environment issues: `pip install -r requirements-dev.txt`
 - Ensure all environment variables are set correctly
 

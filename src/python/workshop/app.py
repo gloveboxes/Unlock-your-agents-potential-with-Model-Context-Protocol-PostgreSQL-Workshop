@@ -11,9 +11,7 @@ REST API available at: http://127.0.0.1:8006
 import sys
 from pathlib import Path
 
-# Add the mcp_server directory to the path
 sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
-
 import logging
 import sys
 from contextlib import asynccontextmanager
@@ -28,8 +26,8 @@ from chat_service import ChatRequest, ChatStreamingService
 from config import Config
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from mcp_client import MCPClient  # type: ignore
 from opentelemetry import trace
+from sales_analysis_client import MCPClient  # type: ignore
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 
@@ -47,15 +45,6 @@ trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
 mcp_client = MCPClient.create_default()
 
-tools = [
-    {"type": "code_interpreter"},
-    {
-        "type": "mcp",
-        "server_label": "ZavaMcpServer",
-        "server_url": Config.DEV_TUNNEL_URL,
-    },
-]
-
 
 class AgentManager:
     """Manages Azure AI Agent lifecycle and dependencies."""
@@ -64,22 +53,23 @@ class AgentManager:
         """Setup MCP tools and code interpreter."""
 
         if Config.MAP_MCP_FUNCTIONS:
-            mcp_tools = await mcp_client.build_function_tools()
-            self.toolset.add(mcp_tools)
+            function_tools = await mcp_client.build_function_tools()
+            self.toolset.add(function_tools)
         else:
-            self.mcp_tools = McpTool(
-                server_label="ZavaMcpServer",
-                server_url="https://1rhz2hth-8010.aue.devtunnels.ms/mcp",
+            mcp_tools = McpTool(
+                server_label="ZavaSalesAnalysisMcpServer",
+                server_url=Config.DEV_TUNNEL_URL,
                 allowed_tools=[
                     "get_multiple_table_schemas",
                     "execute_sales_query",
                     "get_current_utc_date",
-                ],  # Optional: specify allowed tools
+                ],
             )
-
-            # self.mcp_tools.set_approval_mode("never")  # Uncomment to disable approval requirement
-
-            self.toolset.add(self.mcp_tools)
+            # PostgreSQL Row Level Security (RLS) User ID header
+            mcp_tools.update_headers("x-rls-user-id", Config.RLS_USER_ID)
+            # Disabled as specified in allowed tools
+            mcp_tools.set_approval_mode("never")
+            self.toolset.add(mcp_tools)
 
         # Add code interpreter tool
         code_interpreter = CodeInterpreterTool()
@@ -92,7 +82,6 @@ class AgentManager:
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
-        self.mcp_tools = None
 
     async def initialize(self, instructions_file: str) -> bool:
         """Initialize the agent with tools and instructions."""
@@ -100,12 +89,11 @@ class AgentManager:
             # Validate configuration
             Config.validate_required_env_vars()
 
-            # Load instructions
+            # Load LLM instructions
             instructions = self.utilities.load_instructions(instructions_file)
 
             # Validate Azure Entra ID Authentication
             credential = await self.utilities.validate_azure_authentication()
-            print("✅ Azure Entra ID authentication successful!")
 
             # Create clients
             self.agents_client = AgentsClient(

@@ -62,7 +62,7 @@
             "name": "Debug: MCP Sales Server",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/python/mcp_server/mcp_server.py",
+            "program": "${workspaceFolder}/src/python/mcp_server/sales_analysis_mcp_server.py",
             "console": "integratedTerminal",
             "args": [],
             "env": {

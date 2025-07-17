@@ -19,7 +19,7 @@
             "onAutoForward": "silent"
         }
         ,
-        "8010": {
+        "8000": {
             "label": "Agent Service",
             "onAutoForward": "silent"
         }

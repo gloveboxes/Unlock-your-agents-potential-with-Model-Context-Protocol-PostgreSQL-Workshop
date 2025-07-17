@@ -16,11 +16,11 @@ The time service will be implemented as a new tool in the MCP server, which can 
 
 ## Lab Exercise
 
-Enable the MCP time service by uncommenting the `get_current_utc_date` function in the `mcp_server.py` file. This function will return the current UTC date and time in ISO format, which can be used by the LLM to answer time-related queries.
+Enable the MCP time service by uncommenting the `get_current_utc_date` function in the `sales_analysis_mcp_server.py` file. This function will return the current UTC date and time in ISO format, which can be used by the LLM to answer time-related queries.
 
 === "Python"
 
-    1. Open the `mcp_server.py` file in the `src/python/mcp` directory.
+    1. Open the `sales_analysis_mcp_server.py` file in the `src/python/mcp` directory.
     2. Uncomment the **@mcp.tool()** decorator for the `get_current_utc_date` function. This decorator registers the function as an MCP tool that can be called by the LLM. After uncommenting, your code should look like this:
 
         ```python

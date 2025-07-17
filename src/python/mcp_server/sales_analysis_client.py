@@ -28,7 +28,7 @@ class MCPClient:
     def create_default(cls) -> "MCPClient":
         """Create an MCPClient with default server configuration."""
         script_dir = Path(__file__).resolve().parent
-        server_script_path = script_dir / "mcp_server.py"
+        server_script_path = script_dir / "sales_analysis_mcp_server.py"
         return cls([sys.executable, str(server_script_path), "--stdio"])
 
     async def __aenter__(self) -> "MCPClient":
@@ -142,8 +142,8 @@ class MCPClient:
             # Create specific functions based on tool name to maintain correct signatures
             if tool_name == "execute_sales_query":
 
-                async def execute_sales_query(postgresql_query: str, rls_user_id: str) -> str:
-                    return await self.call_tool_async("execute_sales_query", {"postgresql_query": postgresql_query, "rls_user_id": rls_user_id})
+                async def execute_sales_query(postgresql_query: str) -> str:
+                    return await self.call_tool_async("execute_sales_query", {"postgresql_query": postgresql_query})
 
                 execute_sales_query.__name__ = tool_name
                 execute_sales_query.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)
@@ -151,8 +151,8 @@ class MCPClient:
 
             elif tool_name == "get_multiple_table_schemas":
 
-                async def get_multiple_table_schemas(table_names: List[str], rls_user_id: str) -> str:
-                    return await self.call_tool_async("get_multiple_table_schemas", {"table_names": table_names, "rls_user_id": rls_user_id})
+                async def get_multiple_table_schemas(table_names: List[str]) -> str:
+                    return await self.call_tool_async("get_multiple_table_schemas", {"table_names": table_names})
 
                 get_multiple_table_schemas.__name__ = tool_name
                 get_multiple_table_schemas.__doc__ = self._build_enhanced_docstring(tool_description, tool_parameters)

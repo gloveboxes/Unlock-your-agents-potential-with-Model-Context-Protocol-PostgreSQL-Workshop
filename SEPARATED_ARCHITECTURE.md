@@ -44,7 +44,7 @@ This project has been refactored to separate the web interface from the agent se
   - File serving from agent-generated content
   - **Shared modules** (config, utilities, stream_event_handler)
 
-### 3. MCP Server (`src/python/mcp/mcp_server.py`)
+### 3. MCP Server (`src/python/mcp/sales_analysis_mcp_server.py`)
 
 - **Port**: 8010
 - **Purpose**: PostgreSQL database integration
@@ -68,7 +68,7 @@ Start each service in separate terminals:
 ```bash
 # Terminal 1 - MCP Server
 cd src/python/mcp
-python mcp_server.py
+python sales_analysis_mcp_server.py
 
 # Terminal 2 - Agent Service  
 cd src/python/workshop

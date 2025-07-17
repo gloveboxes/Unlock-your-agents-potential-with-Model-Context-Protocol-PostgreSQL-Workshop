@@ -7,11 +7,10 @@ and streaming responses.
 
 import asyncio
 import contextlib
-import traceback
 from typing import AsyncGenerator, Dict, List, Protocol, cast
 
 from azure.ai.agents.aio import AgentsClient
-from azure.ai.agents.models import Agent, AgentThread
+from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet
 from config import Config
 from opentelemetry import trace
 from pydantic import BaseModel
@@ -30,6 +29,7 @@ class AgentManagerProtocol(Protocol):
     agents_client: AgentsClient | None
     agent: Agent | None
     thread: AgentThread | None
+    toolset: AsyncToolSet
 
     @property
     def is_initialized(self) -> bool: ...
@@ -111,6 +111,7 @@ class ChatStreamingService:
                         agents_client = cast(AgentsClient, self.agent_manager.agents_client)
                         agent = cast(Agent, self.agent_manager.agent)
                         thread = cast(AgentThread, self.agent_manager.thread)
+                        toolset = cast(AsyncToolSet, self.agent_manager.toolset)
 
                         try:
                             async with await agents_client.runs.stream(
@@ -121,14 +122,12 @@ class ChatStreamingService:
                                 max_prompt_tokens=Config.MAX_PROMPT_TOKENS,
                                 temperature=Config.TEMPERATURE,
                                 top_p=Config.TOP_P,
-                                instructions=agent.instructions,
+                                tool_resources=toolset.resources,
                             ) as stream:
                                 await stream.until_done()
-                            stream_span.set_attribute("agent_id", agent.id)
-                            stream_span.set_attribute("max_completion_tokens", Config.MAX_COMPLETION_TOKENS)
+
                         except Exception as e:
                             print(f"❌ Error in agent stream: {e}")
-                            traceback.print_exc()
                             # Send error to client
                             await web_handler.token_queue.put({"type": "error", "error": str(e)})
                             span.set_attribute("error", True)
