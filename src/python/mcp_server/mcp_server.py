@@ -48,13 +48,15 @@ mcp = FastMCP("mcp-zava-sales", lifespan=app_lifespan, stateless_http=True)
 def get_header(ctx: Context, header_name: str) -> Optional[str]:
     """Extract a specific header from the request context."""
 
-    headers = ctx.request_context.request.headers  # type: ignore
-    if headers:
-        header_value = headers.get(header_name)
-        if header_value is not None:
-            if isinstance(header_value, bytes):
-                return header_value.decode("utf-8")
-            return str(header_value)
+    request = ctx.request_context.request 
+    if request is not None and hasattr(request, 'headers'):
+        headers = request.headers
+        if headers:
+            header_value = headers.get(header_name)
+            if header_value is not None:
+                if isinstance(header_value, bytes):
+                    return header_value.decode("utf-8")
+                return str(header_value)
 
     return None
 
@@ -83,7 +85,6 @@ async def get_multiple_table_schemas(
 
     Args:
         table_names: List of table names. Valid table names include 'retail.customers', 'retail.stores', 'retail.categories', 'retail.product_types', 'retail.products', 'retail.orders', 'retail.order_items', 'retail.inventory'.
-        rls_user_id: PostgreSQL Record Level Security (RLS) User ID.
 
     Returns:
         Concatenated schema strings for the requested tables.
@@ -128,7 +129,6 @@ async def execute_sales_query(
 
     Args:
         postgresql_query: A well-formed PostgreSQL query.
-        rls_user_id: PostgreSQL Record Level Security (RLS) User ID.
 
     Returns:
         Query results as a string.
@@ -169,8 +169,7 @@ async def get_current_utc_date() -> str:
 async def run_http_server() -> None:
     """Run the MCP server in HTTP mode."""
     # Configure server settings
-    mcp.settings.port = 8010
-    # mcp.settings.stateless_http = True
+    # mcp.settings.port = 3000
 
     print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
 
