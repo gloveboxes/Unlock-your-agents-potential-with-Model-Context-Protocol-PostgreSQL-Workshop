@@ -1,5 +1,7 @@
 ## Introduction
 
+TODO - The fix is going to be to set the start of the finacial year for the company....
+
 Tracing helps you understand and debug your agent's behavior by showing the sequence of steps, inputs, and outputs during execution. In Azure AI Foundry, tracing lets you observe how your agent processes requests, calls tools, and generates responses. You can use the Azure AI Foundry portal or integrate with OpenTelemetry and Application Insights to collect and analyze trace data, making it easier to troubleshoot and optimize your agent.
 
 <!-- ## Lab Exercise

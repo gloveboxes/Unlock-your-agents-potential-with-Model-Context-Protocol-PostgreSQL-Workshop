@@ -20,7 +20,7 @@ Enable the MCP time service by uncommenting the `get_current_utc_date` function 
 
 === "Python"
 
-    1. Open the `mcp_server_sales_analysis.py` file in the `src/python/mcp` directory.
+    1. Open the `mcp_server_sales_analysis.py` file in the `src/python/mcp_server` directory.
     2. Uncomment the **@mcp.tool()** decorator for the `get_current_utc_date` function. This decorator registers the function as an MCP tool that can be called by the LLM. After uncommenting, your code should look like this:
 
         ```python
