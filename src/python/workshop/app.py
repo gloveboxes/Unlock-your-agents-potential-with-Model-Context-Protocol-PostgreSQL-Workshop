@@ -112,7 +112,7 @@ class AgentManager:
             )
 
             # Setup tools
-            print("Setting up MCP tools...")
+            logger.info("Setting up MCP tools...")
             await self._setup_tools()
 
             # Enable Azure Monitor Telemetry

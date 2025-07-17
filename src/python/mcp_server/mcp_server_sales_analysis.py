@@ -142,8 +142,8 @@ async def get_multiple_table_schemas(
             "retail.inventory",
         }
 
-    print(f"Manager ID: {rls_user_id}")
-    print(f"Retrieving schemas for tables: {', '.join(table_names)}")
+    logger.info("Manager ID: %s", rls_user_id)
+    logger.info("Retrieving schemas for tables: %s", ', '.join(table_names))
 
     try:
         provider = get_db_provider()
@@ -167,11 +167,12 @@ async def execute_sales_query(
 
     rls_user_id = get_rls_user_id(ctx)
 
-    print(f"Manager ID: {rls_user_id}")
-    print(f"Executing PostgreSQL query: {postgresql_query}")
+    logger.info("Manager ID: %s", rls_user_id)
+    logger.info("Executing PostgreSQL query: %s", postgresql_query)
 
     try:
         if not postgresql_query:
+            logger.error("postgresql_query parameter is required and cannot be empty")
             return "Error: postgresql_query parameter is required"
 
         provider = get_db_provider()
@@ -179,10 +180,8 @@ async def execute_sales_query(
         return f"Query Results:\n{result}"
 
     except Exception as e:
-        return f"Error executing database query: {e!s}"
-
-        except Exception as e:
-            return f"Error executing database query: {e!s}"
+        logger.error("Error executing database query: %s", e)
+        return "Error executing database query"
 
 @mcp.tool()
 async def get_current_utc_date() -> str:
@@ -204,7 +203,14 @@ async def get_current_utc_date() -> str:
 
 async def run_http_server() -> None:
     """Run the MCP server in HTTP mode."""
-    print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
+    # if a PORT environment variable is set, use it
+    port = int(os.environ.get("PORT", 8000))
+    mcp.settings.port = port
+    
+    # Enable OpenTelemetry tracing for the Starlette app
+    StarletteInstrumentor().instrument_app(mcp.app)
+
+    logger.info("📡 MCP endpoint available at: http://%s:%d/mcp", mcp.settings.host, mcp.settings.port)
 
     # Run the FastMCP server as HTTP endpoint
     await mcp.run_streamable_http_async()

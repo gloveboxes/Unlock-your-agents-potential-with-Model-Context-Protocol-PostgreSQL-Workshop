@@ -136,7 +136,7 @@ class ChatManager:
                                 await stream.until_done()
 
                         except Exception as e:
-                            print(f"❌ Error in agent stream: {e}")
+                            logger.error("❌ Error in agent stream: %s", e, stack_info=True)
                             # Send error to client
                             await web_handler.token_queue.put({"type": "error", "error": str(e)})
                             span.set_attribute("error", True)

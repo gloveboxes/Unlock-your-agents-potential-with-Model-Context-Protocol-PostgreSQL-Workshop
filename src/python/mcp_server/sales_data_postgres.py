@@ -839,7 +839,7 @@ async def main() -> None:
 
             logger.info("\n✅ SQL Query tests completed!")
             logger.info("=" * 50)
-            print(f"\n📋 All table schemas in {SCHEMA_NAME} schema:\n")
+            logger.info("\n📋 All table schemas in %s schema:\n", SCHEMA_NAME)
 
             # --- Use the new efficient method for getting all schemas ---
             all_table_names = [
@@ -852,10 +852,10 @@ async def main() -> None:
                 f"{SCHEMA_NAME}.{ORDER_ITEMS_TABLE}",
                 f"{SCHEMA_NAME}.{INVENTORY_TABLE}"
             ]
-            print(await provider.get_table_metadata_from_list(all_table_names, rls_user_id=MANAGER_ID))
+            logger.info("Table metadata: %s", await provider.get_table_metadata_from_list(all_table_names, rls_user_id=MANAGER_ID))
 
     except Exception as e:
-        logger.error(f"❌ Error during analysis: {e}")
+        logger.error("❌ Error during analysis: %s", e)
         raise
 
 
