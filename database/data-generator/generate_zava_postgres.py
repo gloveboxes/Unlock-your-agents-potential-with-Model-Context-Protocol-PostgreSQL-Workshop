@@ -502,9 +502,7 @@ async def setup_store_manager_permissions(conn):
         await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT SELECT ON TABLES TO store_manager")
         await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT USAGE ON SEQUENCES TO store_manager")
         
-        # Also grant some additional permissions that might be needed
-        await conn.execute(f"GRANT INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA {SCHEMA_NAME} TO store_manager")
-        await conn.execute(f"ALTER DEFAULT PRIVILEGES IN SCHEMA {SCHEMA_NAME} GRANT INSERT, UPDATE, DELETE ON TABLES TO store_manager")
+        # Do not grant INSERT, UPDATE, DELETE permissions to store_manager (SELECT only)
         
         logging.info("Store manager permissions granted successfully!")
         logging.info("Store manager can now:")

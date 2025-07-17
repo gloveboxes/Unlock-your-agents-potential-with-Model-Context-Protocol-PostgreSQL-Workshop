@@ -38,7 +38,6 @@ EOSQL
 
 # Check if backup file exists and restore it
 BACKUP_FILE_NEW="/docker-entrypoint-initdb.d/backups/zava_retail_2025_07_14_postgres_rls.backup"
-BACKUP_FILE_OLD="/docker-entrypoint-initdb.d/backups/zava_retail_2025_05_27_postgres.backup"
 
 echo "🔍 Checking for backup files..."
 echo "📁 Contents of backup directory:"
@@ -57,10 +56,6 @@ fi
 if [ -f "$BACKUP_FILE_NEW" ]; then
     BACKUP_FILE="$BACKUP_FILE_NEW"
     echo "📂 Found newer backup file with RLS: $BACKUP_FILE"
-elif [ -f "$BACKUP_FILE_OLD" ]; then
-    BACKUP_FILE="$BACKUP_FILE_OLD"
-    echo "📂 Found older backup file: $BACKUP_FILE"
-    echo "⚠️  Using older backup - RLS policies may need to be recreated"
 else
     BACKUP_FILE=""
     echo "❌ No backup files found"
