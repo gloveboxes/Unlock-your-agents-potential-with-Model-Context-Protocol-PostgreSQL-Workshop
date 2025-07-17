@@ -155,7 +155,7 @@ async def create_database_schema(conn):
             CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.stores (
                 store_id SERIAL PRIMARY KEY,
                 store_name TEXT UNIQUE NOT NULL,
-                rls_user_id UUID NOT NULL DEFAULT gen_random_uuid(),
+                rls_user_id UUID NOT NULL,
                 is_online BOOLEAN NOT NULL DEFAULT false
             )
         """)
@@ -592,9 +592,13 @@ async def insert_stores(conn):
         for store_name, store_config in stores.items():
             # Determine if this is an online store
             is_online = "online" in store_name.lower()
-            stores_data.append((store_name, is_online))
+            # Get the fixed UUID from the reference data
+            rls_user_id = store_config.get('rls_user_id')
+            if not rls_user_id:
+                raise ValueError(f"No rls_user_id found for store: {store_name}")
+            stores_data.append((store_name, rls_user_id, is_online))
         
-        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.stores (store_name, is_online) VALUES ($1, $2)", stores_data)
+        await batch_insert(conn, f"INSERT INTO {SCHEMA_NAME}.stores (store_name, rls_user_id, is_online) VALUES ($1, $2, $3)", stores_data)
         
         # Log the manager IDs for workshop purposes
         rows = await conn.fetch(f"SELECT store_name, rls_user_id FROM {SCHEMA_NAME}.stores ORDER BY store_name")
