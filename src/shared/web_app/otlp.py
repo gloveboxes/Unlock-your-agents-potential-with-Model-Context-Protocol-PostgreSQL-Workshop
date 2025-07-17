@@ -18,8 +18,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 def configure_oltp_grpc_tracing() -> trace.Tracer:
     # Configure Tracing
     traceProvider = TracerProvider()
-    processor = BatchSpanProcessor(OTLPSpanExporter(
-    ))
+    processor = BatchSpanProcessor(OTLPSpanExporter())
     traceProvider.add_span_processor(processor)
     trace.set_tracer_provider(traceProvider)
 
