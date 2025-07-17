@@ -66,7 +66,7 @@ This lets the agent deliver real-time insights into Zava's sales operations effi
 ```text
 ┌─────────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Azure AI Agent    │    │   MCP Client    │    │   MCP Server    │
-│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (sales_analysis_mcp_server.py) │
+│   (main.py)         │◄──►│ (mcp_client.py) │◄──►│ (mcp_server_sales_analysis.py) │
 │                     │    └─────────────────┘    └─────────────────┘
 │ ┌─────────────────┐ │                                   │
 │ │ Azure AI        │ │                                   ▼

@@ -28,7 +28,7 @@ class MCPClient:
     def create_default(cls) -> "MCPClient":
         """Create an MCPClient with default server configuration."""
         script_dir = Path(__file__).resolve().parent
-        server_script_path = script_dir / "sales_analysis_mcp_server.py"
+        server_script_path = script_dir / "mcp_server_sales_analysis.py"
         return cls([sys.executable, str(server_script_path), "--stdio"])
 
     async def __aenter__(self) -> "MCPClient":

@@ -31,7 +31,7 @@
 		{
 			"label": "Run MCP Server",
 			"type": "shell",
-			"command": "cd src/python/mcp && python sales_analysis_mcp_server.py",
+			"command": "cd src/python/mcp && python mcp_server_sales_analysis.py",
 			"group": "build",
 			"isBackground": true,
 			"problemMatcher": [],

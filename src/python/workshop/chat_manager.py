@@ -48,7 +48,7 @@ class ChatResponse(BaseModel):
     done: bool = False
 
 
-class ChatStreamingService:
+class ChatManager:
     """REST API service for the Azure AI Agent."""
 
     def __init__(self, agent_manager: AgentManagerProtocol) -> None:

@@ -22,12 +22,12 @@ from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import Agent, AgentThread, AsyncToolSet, CodeInterpreterTool, McpTool
 from azure.ai.projects.aio import AIProjectClient
 from azure.monitor.opentelemetry import configure_azure_monitor
-from chat_service import ChatRequest, ChatStreamingService
+from chat_manager import ChatManager, ChatRequest
 from config import Config
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+from mcp_client_sales_analysis import MCPClient  # type: ignore
 from opentelemetry import trace
-from sales_analysis_client import MCPClient  # type: ignore
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 
@@ -163,7 +163,7 @@ class AgentManager:
 
 # Global service instance
 agent_manager = AgentManager()
-agent_service = ChatStreamingService(agent_manager)
+agent_service = ChatManager(agent_manager)
 
 
 @asynccontextmanager
