@@ -251,7 +251,7 @@ class PostgreSQLSchemaProvider:
         # Get current span (created by AsyncPGInstrumentor) and add additional attributes
         with tracer.start_as_current_span("get_table_schema") as current_span:
             if current_span:
-                current_span.set_attribute("app.manager_id", manager_id)
+                current_span.set_attribute("app.manager_id", rls_user_id)
                 current_span.set_attribute("db.table", table_name)
                 current_span.update_name("PostgreSQL:get_table_schema")
 
@@ -703,7 +703,7 @@ class PostgreSQLSchemaProvider:
             # Get current span (created by AsyncPGInstrumentor) and add additional attributes
             with tracer.start_as_current_span("execute_query") as current_span:
                 if current_span:
-                    current_span.set_attribute("app.manager_id", manager_id)
+                    current_span.set_attribute("app.manager_id", rls_user_id)
                     current_span.set_attribute("db.query", sql_query)
                     current_span.update_name("PostgreSQL:execute_query")
 

@@ -21,7 +21,7 @@ string virtualEnvironmentPath = "/usr/local/python/current";
 
 var devtunnel = builder.AddDevTunnel("mcp-devtunnel");
 
-var mcpServer = builder.AddPythonApp("python-mcp-server", Path.Combine(sourceFolder, "python", "mcp_server"), "mcp_server.py", virtualEnvironmentPath: virtualEnvironmentPath)
+var mcpServer = builder.AddPythonApp("python-mcp-server", Path.Combine(sourceFolder, "python", "mcp_server"), "mcp_server_sales_analysis.py", virtualEnvironmentPath: virtualEnvironmentPath)
     .WithPostgres(zava)
     .WithHttpEndpoint(env: "PORT")
     .WithOtlpExporter()

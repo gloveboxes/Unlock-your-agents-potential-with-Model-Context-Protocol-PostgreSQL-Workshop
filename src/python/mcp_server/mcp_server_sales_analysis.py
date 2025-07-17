@@ -2,6 +2,7 @@
 """
 Provides comprehensive customer sales database access with individual table schema tools for Zava Retail DIY Business.
 """
+
 import logging
 import os
 import sys
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 trace_scenario = "Zava MCP Server"
+
 
 @dataclass
 class AppContext:
@@ -89,6 +91,7 @@ def get_rls_user_id(ctx: Context) -> str:
         rls_user_id = "00000000-0000-0000-0000-000000000000"
     return rls_user_id
 
+
 def get_db_provider() -> PostgreSQLSchemaProvider:
     """Get the database provider instance from context."""
     with tracer.start_as_current_span("get_db_provider"):
@@ -96,7 +99,7 @@ def get_db_provider() -> PostgreSQLSchemaProvider:
         app_context = ctx.request_context.lifespan_context
         if isinstance(app_context, AppContext):
             return app_context.db
-        
+
         logger.error("Invalid lifespan context type: %s", type(app_context))
         raise RuntimeError("Invalid lifespan context type")
 
@@ -143,7 +146,7 @@ async def get_multiple_table_schemas(
         }
 
     logger.info("Manager ID: %s", rls_user_id)
-    logger.info("Retrieving schemas for tables: %s", ', '.join(table_names))
+    logger.info("Retrieving schemas for tables: %s", ", ".join(table_names))
 
     try:
         provider = get_db_provider()
@@ -183,6 +186,7 @@ async def execute_sales_query(
         logger.error("Error executing database query: %s", e)
         return "Error executing database query"
 
+
 @mcp.tool()
 async def get_current_utc_date() -> str:
     """Get the current UTC date and time in ISO format. Useful for date-based queries, filtering recent data, or understanding the current context for time-sensitive analysis.
@@ -206,9 +210,10 @@ async def run_http_server() -> None:
     # if a PORT environment variable is set, use it
     port = int(os.environ.get("PORT", 8000))
     mcp.settings.port = port
-    
+
     # Enable OpenTelemetry tracing for the Starlette app
-    StarletteInstrumentor().instrument_app(mcp.app)
+    StarletteInstrumentor().instrument_app(mcp.sse_app())
+    StarletteInstrumentor().instrument_app(mcp.streamable_http_app())
 
     logger.info("📡 MCP endpoint available at: http://%s:%d/mcp", mcp.settings.host, mcp.settings.port)
 
