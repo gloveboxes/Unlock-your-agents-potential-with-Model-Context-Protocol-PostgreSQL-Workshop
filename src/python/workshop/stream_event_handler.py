@@ -55,7 +55,7 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
             print(f"Run ID: {run.id}")
 
         if run.status == RunStatus.REQUIRES_ACTION and isinstance(run.required_action, SubmitToolApprovalAction):
-            print(f"run action required for run: {run.id}")
+            # print(f"run action required for run: {run.id}")
             tool_calls = run.required_action.submit_tool_approval.tool_calls
             if not tool_calls:
                 print("No tool calls provided - cancelling run")

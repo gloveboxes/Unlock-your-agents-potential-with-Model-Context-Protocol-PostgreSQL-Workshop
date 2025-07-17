@@ -15,6 +15,8 @@ from mcp.server.fastmcp import Context, FastMCP
 from pydantic import Field
 from sales_data_postgres import PostgreSQLSchemaProvider
 
+RLS_USER_ID = None
+
 
 @dataclass
 class AppContext:
@@ -48,8 +50,8 @@ mcp = FastMCP("mcp-zava-sales", lifespan=app_lifespan, stateless_http=True)
 def get_header(ctx: Context, header_name: str) -> Optional[str]:
     """Extract a specific header from the request context."""
 
-    request = ctx.request_context.request 
-    if request is not None and hasattr(request, 'headers'):
+    request = ctx.request_context.request
+    if request is not None and hasattr(request, "headers"):
         headers = request.headers
         if headers:
             header_value = headers.get(header_name)
@@ -59,6 +61,20 @@ def get_header(ctx: Context, header_name: str) -> Optional[str]:
                 return str(header_value)
 
     return None
+
+
+def get_rls_user_id(ctx: Context) -> str:
+    """Get the Row Level Security User ID from the request context."""
+
+    # if running in stdio mode, use the global RLS_USER_ID passed as an argument
+    if RLS_USER_ID is not None:
+        return RLS_USER_ID
+
+    rls_user_id = get_header(ctx, "rls-user-id-header")
+    if rls_user_id is None:
+        # Default to a placeholder if not provided
+        rls_user_id = "00000000-0000-0000-0000-000000000000"
+    return rls_user_id
 
 
 def get_db_provider() -> PostgreSQLSchemaProvider:
@@ -90,7 +106,7 @@ async def get_multiple_table_schemas(
         Concatenated schema strings for the requested tables.
     """
 
-    rls_user_id = get_header(ctx, "rls-user-id-header") or "00000000-0000-0000-0000-000000000000"
+    rls_user_id = get_rls_user_id(ctx)
 
     if not table_names:
         return "Error: table_names parameter is required and cannot be empty"
@@ -125,7 +141,7 @@ async def get_multiple_table_schemas(
 async def execute_sales_query(
     ctx: Context, postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")]
 ) -> str:
-    """Run a PostgreSQL query against the sales database by first using get_multiple_table_schemas() to retrieve schemas for any tables you haven't yet obtained, then, if your query depends on the current date or time, call get_current_utc_date() to get the current UTC date/time. Always compose your SQL using the exact table and column names from these schemas, and pass the query to this tool for execution. For more readable results, join related tables to show descriptive fields such as customer names, product names, store names, and category names; distinguish online and physical stores using the is_online flag (for example, CASE WHEN s.is_online THEN 'Online' ELSE 'Physical' END AS store_type); and, unless the user specifically asks for raw data, prefer aggregated results using functions like SUM, AVG, COUNT, and GROUP BY. ALWAYS Limit the number of rows returned to 20 or fewer to avoid overwhelming the user with too much data and explain that results are limited for performance and readability.
+    """Always fetch table schemas first, use exact column names, join related tables for clarity, aggregate results, limit output to 20 rows, and explain that results are limited for readability.
 
     Args:
         postgresql_query: A well-formed PostgreSQL query.
@@ -134,7 +150,7 @@ async def execute_sales_query(
         Query results as a string.
     """
 
-    rls_user_id = get_header(ctx, "rls-user-id-header") or "00000000-0000-0000-0000-000000000000"
+    rls_user_id = get_rls_user_id(ctx)
 
     print(f"Manager ID: {rls_user_id}")
     print(f"Executing PostgreSQL query: {postgresql_query}")
@@ -168,9 +184,6 @@ async def get_current_utc_date() -> str:
 
 async def run_http_server() -> None:
     """Run the MCP server in HTTP mode."""
-    # Configure server settings
-    # mcp.settings.port = 3000
-
     print(f"📡 MCP endpoint available at: http://{mcp.settings.host}:{mcp.settings.port}/mcp")
 
     # Run the FastMCP server as HTTP endpoint
@@ -179,9 +192,15 @@ async def run_http_server() -> None:
 
 def main() -> None:
     """Main entry point for the MCP server."""
+    global RLS_USER_ID
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--stdio", action="store_true", help="Run server in stdio mode")
+    parser.add_argument("--RLS_USER_ID", type=str, default=None, help="Row Level Security User ID")
     args = parser.parse_args()
+
+    # if running in stdio mode, set the global RLS_USER_ID
+    RLS_USER_ID = args.RLS_USER_ID
 
     if args.stdio:
         mcp.run()

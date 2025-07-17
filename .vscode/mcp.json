@@ -1,11 +1,14 @@
 {
-    "servers": {
-        "mcp-zava-sales-devcontainer": {
-            "type": "stdio",
-            "command": "/usr/local/bin/python",
-            "args": [
-                "${workspaceFolder}/src/python/workshop/mcp_server.py"
-            ]
-        }
-    }
+	"servers": {
+		"zava-sales-assistant-stdio": {
+			"type": "stdio",
+			"command": "python",
+			"args": [
+				"${workspaceFolder}/src/python/mcp_server/mcp_server.py",
+				"--stdio",
+				"--RLS_USER_ID=00000000-0000-0000-0000-000000000000",
+			]
+		}
+	},
+	"inputs": []
 }
