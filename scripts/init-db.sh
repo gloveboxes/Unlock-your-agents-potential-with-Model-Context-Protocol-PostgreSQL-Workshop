@@ -277,9 +277,9 @@ EOSQL
         psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "zava" <<-EOSQL
             -- Re-grant permissions on all tables and sequences in retail schema
             GRANT USAGE ON SCHEMA retail TO store_manager;
-            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA retail TO store_manager;
-            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA retail TO store_manager;
-            RAISE NOTICE 'Re-granted permissions to store_manager after restoration';
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA retail TO "$POSTGRES_USER";
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA retail TO "$POSTGRES_USER";
+            -- RAISE NOTICE 'Re-granted permissions to "$POSTGRES_USER" after restoration';
 EOSQL
     else
         echo "⚠️  Database restoration failed or no backup found"

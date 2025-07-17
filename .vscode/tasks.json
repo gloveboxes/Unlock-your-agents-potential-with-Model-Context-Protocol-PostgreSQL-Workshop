@@ -2,15 +2,6 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Run Agent Web Chat (Legacy)",
-			"type": "shell",
-			"command": "python app.py",
-			"group": "build",
-			"isBackground": true,
-			"problemMatcher": [],
-			"args": []
-		},
-		{
 			"label": "Run Agent Service",
 			"type": "shell",
 			"command": "python agent_service.py",
@@ -43,8 +34,14 @@
 			"problemMatcher": [],
 			"args": [],
 			"options": {
-				"cwd": "${workspaceFolder}/src/shared/mcp"
+				"cwd": "${workspaceFolder}/src/python/mcp_server"
 			}
+		},
+		{
+			"label": "Kill Inspector",
+			"type": "shell",
+			"command": "${workspaceFolder}/src/shared/kill_inspector.sh",
+			"problemMatcher": []
 		}
 	]
 }

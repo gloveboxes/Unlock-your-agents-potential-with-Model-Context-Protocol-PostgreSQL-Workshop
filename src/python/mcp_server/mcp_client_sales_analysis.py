@@ -4,13 +4,21 @@ import asyncio
 import logging
 import sys
 from pathlib import Path
+
+# Add the mcp_server directory to the path
+sys.path.append(str(Path(__file__).parent.parent / "shared"))
+
 from typing import Any, Callable, Dict, List, Optional
 
 from azure.ai.agents.models import AsyncFunctionTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from otlp import configure_oltp_grpc_tracing
 from terminal_colors import TerminalColors as tc
 
+tracer = configure_oltp_grpc_tracing()
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class MCPClient:
     """Client for communicating with MCP servers."""
@@ -89,11 +97,12 @@ class MCPClient:
         try:
             await self._ensure_session()
             assert self._session is not None
-            print(f"{tc.BRIGHT_BLUE}Calling tool: {tool_name} with arguments: {arguments}{tc.RESET}")
+            logger.info("Calling tool: %s with arguments: %s", tool_name, arguments)
             result = await self._session.call_tool(tool_name, arguments)
             return self._extract_content(result)
         except Exception as e:
             await self.close_session()
+            logger.error("Error calling tool %s: %s", tool_name, e)
             error_msg = f"Error calling tool {tool_name}: {e}"
             logging.error(error_msg)
             return error_msg
@@ -116,20 +125,20 @@ class MCPClient:
                 for tool in tools_result.tools
             ]
         except Exception as e:
-            logging.error(f"Error fetching tools from MCP server: {e}")
+            logger.error("Error fetching tools from MCP server: %s", e)
             await self.close_session()
             return []
 
     async def build_function_tools(self) -> AsyncFunctionTool:
         """Fetch tool schemas from MCP Server and build function tools."""
-        print("🔧 Fetching tools from MCP server...")
+        logger.info("🔧 Fetching tools from MCP server...")
 
         tools = await self.fetch_tools_async()
         if not tools:
-            print("⚠️  No tools found from MCP server")
+            logger.warning("⚠️  No tools found from MCP server")
             return AsyncFunctionTool(set())
 
-        print(f"✅ Found {len(tools)} tools from MCP server")
+        logger.info("✅ Found %d tools from MCP server", len(tools))
 
         # Create specific tool functions with proper parameter signatures
         functions_set = set()
@@ -181,7 +190,7 @@ class MCPClient:
                 functions_set.add(generic_func)
 
         tool_names = [tool["function"]["name"] for tool in tools]
-        print(f"📋 Available MCP tools: {', '.join(tool_names)}")
+        logger.info("📋 Available MCP tools: %s", ', '.join(tool_names))
 
         return AsyncFunctionTool(functions_set)
 
@@ -192,11 +201,11 @@ if __name__ == "__main__":
         client = MCPClient.create_default()
         async with client:
             tools = await client.fetch_tools_async()
-            print(f"Available tools: {[tool['function']['name'] for tool in tools]}")
+            logger.info("Available tools: %s", [tool['function']['name'] for tool in tools])
 
             if tools:
                 tool_name = tools[0]["function"]["name"]
                 result = await client.call_tool_async(tool_name, {})
-                print(f"Test result: {result}")
+                logger.info("Test result: %s", result)
 
     asyncio.run(test())

@@ -7,15 +7,15 @@ using Model Context Protocol (MCP) tools and provides a REST API for chat.
 To run: python app.py
 REST API available at: http://127.0.0.1:8006
 """
-
+import logging
+import os
 import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
-import logging
-import sys
+sys.path.append(str(Path(__file__).parent.parent / "shared"))
+
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any, AsyncGenerator, Dict
 
 from azure.ai.agents.aio import AgentsClient
@@ -28,13 +28,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from mcp_client_sales_analysis import MCPClient  # type: ignore
 from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from otlp import configure_oltp_grpc_tracing
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 
 # Configure logging - suppress verbose Azure SDK logs
+# Auto-detection of insecure mode will happen based on endpoint
+tracer = configure_oltp_grpc_tracing()
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
-Utilities.suppress_logs()
+logging.basicConfig(level=logging.INFO)
+# Utilities.suppress_logs()
 
 # Agent Instructions
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
@@ -44,7 +48,6 @@ RESPONSE_TIMEOUT_SECONDS = 60
 trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
 mcp_client = MCPClient.create_default()
-
 
 class AgentManager:
     """Manages Azure AI Agent lifecycle and dependencies."""
@@ -82,6 +85,7 @@ class AgentManager:
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
+        self.mcp_tools = None
 
     async def initialize(self, instructions_file: str) -> bool:
         """Initialize the agent with tools and instructions."""
@@ -94,6 +98,7 @@ class AgentManager:
 
             # Validate Azure Entra ID Authentication
             credential = await self.utilities.validate_azure_authentication()
+            logger.info("✅ Azure Entra ID authentication successful!")
 
             # Create clients
             self.agents_client = AgentsClient(
@@ -115,9 +120,11 @@ class AgentManager:
 
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
-                print("Creating agent...")
+                logger.info("Creating agent...")
                 if not Config.MODEL_DEPLOYMENT_NAME:
-                    raise ValueError("Config.MODEL_DEPLOYMENT_NAME must not be None")
+                    logger.error("Config.MODEL_DEPLOYMENT_NAME must not be None")
+                    raise ValueError(
+                        "Config.MODEL_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
@@ -125,17 +132,18 @@ class AgentManager:
                     toolset=self.toolset,
                     temperature=Config.TEMPERATURE,
                 )
-                print(f"Created agent, ID: {self.agent.id}")
+                logger.info("Created agent, ID: %s", self.agent.id)
+                logger.info("Agent using MCP server at: %s", Config.DEV_TUNNEL_URL)
 
                 # Enable auto function calls
                 if self.toolset.definitions and Config.MAP_MCP_FUNCTIONS:
                     self.agents_client.enable_auto_function_calls(tools=self.toolset)
-                    print("Enabled auto function calls.")
+                    logger.info("Enabled auto function calls.")
 
                 # Create thread
-                print("Creating thread...")
+                logger.info("Creating thread...")
                 self.thread = await self.agents_client.threads.create()
-                print(f"Created thread, ID: {self.thread.id}")
+                logger.info("Created thread, ID: %s", self.thread.id)
 
             return True
 
@@ -151,9 +159,9 @@ class AgentManager:
         if self.agent and self.thread and self.agents_client:
             try:
                 await self.utilities.cleanup_agent_resources(self.agent, self.thread, self.agents_client)
-                print("Agent resources cleaned up.")
+                logger.info("Agent resources cleaned up.")
             except Exception as e:
-                print(f"Warning: Error during cleanup: {e}")
+                logger.error("Error during cleanup: %s", e)
 
     @property
     def is_initialized(self) -> bool:
@@ -170,15 +178,15 @@ agent_service = ChatManager(agent_manager)
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     """Handle startup and shutdown events"""
     # Startup
-    print("Initializing agent service on startup...")
+    logger.info("Initializing agent service on startup...")
 
     # Initialize agent
     success = await agent_manager.initialize(INSTRUCTIONS_FILE)
 
     if not success:
-        print(f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
+        logger.error("Agent initialization failed. Check your configuration.")
     elif agent_manager.is_initialized and agent_manager.agent:
-        print(f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
+        logger.info("✅ Agent initialized successfully with ID: %s", agent_manager.agent.id)
 
     yield
 
@@ -188,7 +196,6 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 # FastAPI app with lifespan
 app = FastAPI(title="Azure AI Agent Service", lifespan=lifespan)
-
 
 @app.get("/health")
 async def health_check() -> Dict[str, Any]:
@@ -228,19 +235,23 @@ async def serve_file(filename: str) -> FileResponse:
     file_path = files_dir / filename
 
     if not file_path.exists() or not file_path.is_file():
+        logger.error("File not found: %s", filename)
         raise HTTPException(status_code=404, detail="File not found")
 
     # Security check: ensure the file is within the files directory
     try:
         file_path.resolve().relative_to(files_dir.resolve())
     except ValueError as exc:
+        logger.error("Access denied for file: %s", filename)
         raise HTTPException(status_code=403, detail="Access denied") from exc
 
     return FileResponse(path=str(file_path))
 
+FastAPIInstrumentor.instrument_app(app)
 
 if __name__ == "__main__":
     import uvicorn
 
-    print("Starting agent service...")
-    uvicorn.run(app, host="127.0.0.1", port=8006)
+    port = int(os.environ.get('PORT', 8111))
+    logger.info("Starting agent service on port %d", port)
+    uvicorn.run(app, host="127.0.0.1", port=port)

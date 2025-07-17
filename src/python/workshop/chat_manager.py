@@ -7,6 +7,8 @@ and streaming responses.
 
 import asyncio
 import contextlib
+import logging
+import traceback
 from typing import AsyncGenerator, Dict, List, Protocol, cast
 
 from azure.ai.agents.aio import AgentsClient
@@ -19,6 +21,7 @@ from utilities import Utilities
 
 # Get tracer instance
 tracer = trace.get_tracer("zava_agent.tracing")
+logger = logging.getLogger(__name__)
 
 RESPONSE_TIMEOUT_SECONDS = 60
 
@@ -58,16 +61,20 @@ class ChatManager:
 
     async def process_chat_message(self, request: ChatRequest) -> AsyncGenerator[ChatResponse, None]:
         """Process chat message and stream responses."""
+        logger.info("Processing chat message: %s", request.message)
         if not request.message.strip():
+            logger.error("Received empty message")
             yield ChatResponse(error="Empty message")
             return
 
         if not self.agent_manager.is_initialized:
+            logger.error("Agent not initialized")
             yield ChatResponse(error="Agent not initialized")
             return
 
         # Type guards - ensure all required components are available
         if not self.agent_manager.agents_client or not self.agent_manager.agent or not self.agent_manager.thread:
+            logger.error("Agent components not properly initialized")
             yield ChatResponse(error="Agent components not properly initialized")
             return
 
@@ -96,6 +103,7 @@ class ChatManager:
 
                 # Create message in thread
                 with tracer.start_as_current_span("create_user_message") as message_span:
+                    logger.info("Creating user message in thread %s", self.agent_manager.thread.id)
                     await self.agent_manager.agents_client.messages.create(
                         thread_id=self.agent_manager.thread.id,
                         role="user",
@@ -107,6 +115,7 @@ class ChatManager:
                 with tracer.start_as_current_span("agent_stream_processing") as stream_span:
                     # Start the stream in a background task
                     async def run_stream() -> None:
+                        logger.info("Starting agent stream for thread %s", self.agent_manager.thread.id)
                         # Capture references with type casts since we've already checked they're not None
                         agents_client = cast(AgentsClient, self.agent_manager.agents_client)
                         agent = cast(Agent, self.agent_manager.agent)
@@ -163,6 +172,7 @@ class ChatManager:
                             yield ChatResponse(content=str(item))
 
                     except asyncio.TimeoutError:
+                        logger.warning("Response timeout after %d seconds", RESPONSE_TIMEOUT_SECONDS)
                         yield ChatResponse(error="Response timeout after 60 seconds")
                         break
             finally:
@@ -180,4 +190,5 @@ class ChatManager:
             yield ChatResponse(done=True)
 
         except Exception as e:
+            logger.error("❌ Error processing chat message: %s", e)
             yield ChatResponse(error=f"Streaming error: {e!s}")

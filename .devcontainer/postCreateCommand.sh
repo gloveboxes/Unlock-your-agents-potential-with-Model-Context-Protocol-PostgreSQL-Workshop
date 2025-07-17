@@ -1,4 +1,4 @@
-!#!/usr/bin/env bash
+#!/usr/bin/env bash
 
 echo "Preparing the Python environment..."
 
@@ -8,6 +8,12 @@ pip install --user -r src/python/workshop/requirements.txt
 
 pip install --user -r requirements-dev.txt
 
-pip install --user -r src/shared/chat/requirements.txt
+pip install --user -r src/shared/web_app/requirements.txt
+
+pip install --user -r src/python/shared/requirements.txt
 
 echo "Python environment setup complete."
+
+echo Installing devtunnels
+curl -sL https://aka.ms/DevTunnelCliInstall | bash
+echo "DevTunnels installed."

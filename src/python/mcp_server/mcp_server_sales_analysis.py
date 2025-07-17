@@ -2,9 +2,17 @@
 """
 Provides comprehensive customer sales database access with individual table schema tools for Zava Retail DIY Business.
 """
+import logging
+import os
+import sys
+from pathlib import Path
+
+# Add the mcp_server directory to the path
+sys.path.append(str(Path(__file__).parent.parent / "shared"))
 
 import argparse
 import asyncio
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -12,11 +20,16 @@ from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from mcp.server.fastmcp import Context, FastMCP
+from opentelemetry.instrumentation.starlette import StarletteInstrumentor
+from otlp import configure_oltp_grpc_tracing
 from pydantic import Field
 from sales_data_postgres import PostgreSQLSchemaProvider
 
-RLS_USER_ID = None
+tracer = configure_oltp_grpc_tracing()
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
+trace_scenario = "Zava MCP Server"
 
 @dataclass
 class AppContext:
@@ -40,7 +53,7 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[AppContext]:
         try:
             await db.close_pool()
         except Exception as e:
-            print(f"⚠️  Error closing database pool: {e}")
+            logger.error("⚠️  Error closing database pool: %s", e)
 
 
 # Create MCP server with lifespan support
@@ -76,14 +89,16 @@ def get_rls_user_id(ctx: Context) -> str:
         rls_user_id = "00000000-0000-0000-0000-000000000000"
     return rls_user_id
 
-
 def get_db_provider() -> PostgreSQLSchemaProvider:
     """Get the database provider instance from context."""
-    ctx = mcp.get_context()
-    app_context = ctx.request_context.lifespan_context
-    if isinstance(app_context, AppContext):
-        return app_context.db
-    raise RuntimeError("Invalid lifespan context type")
+    with tracer.start_as_current_span("get_db_provider"):
+        ctx = mcp.get_context()
+        app_context = ctx.request_context.lifespan_context
+        if isinstance(app_context, AppContext):
+            return app_context.db
+        
+        logger.error("Invalid lifespan context type: %s", type(app_context))
+        raise RuntimeError("Invalid lifespan context type")
 
 
 @mcp.tool()
@@ -111,21 +126,21 @@ async def get_multiple_table_schemas(
     if not table_names:
         return "Error: table_names parameter is required and cannot be empty"
 
-    valid_tables = {
-        "retail.customers",
-        "retail.stores",
-        "retail.categories",
-        "retail.product_types",
-        "retail.products",
-        "retail.orders",
-        "retail.order_items",
-        "retail.inventory",
-    }
+    with tracer.start_as_current_span("get_multiple_table_schemas"):
+        if not table_names:
+            logger.error("table_names parameter is required and cannot be empty")
+            return "Error: table_names parameter is required and cannot be empty"
 
-    # Validate table names
-    invalid_tables = [name for name in table_names if name not in valid_tables]
-    if invalid_tables:
-        return f"Error: Invalid table names: {invalid_tables}. Valid tables are: {sorted(valid_tables)}"
+        valid_tables = {
+            "retail.customers",
+            "retail.stores",
+            "retail.categories",
+            "retail.product_types",
+            "retail.products",
+            "retail.orders",
+            "retail.order_items",
+            "retail.inventory",
+        }
 
     print(f"Manager ID: {rls_user_id}")
     print(f"Retrieving schemas for tables: {', '.join(table_names)}")
@@ -166,6 +181,8 @@ async def execute_sales_query(
     except Exception as e:
         return f"Error executing database query: {e!s}"
 
+        except Exception as e:
+            return f"Error executing database query: {e!s}"
 
 @mcp.tool()
 async def get_current_utc_date() -> str:
@@ -174,12 +191,15 @@ async def get_current_utc_date() -> str:
     Returns:
         Current UTC date and time in ISO format (YYYY-MM-DDTHH:MM:SS.fffffZ)
     """
-    print("Retrieving current UTC date and time")
-    try:
-        current_utc = datetime.now(timezone.utc)
-        return f"Current UTC Date/Time: {current_utc.isoformat()}"
-    except Exception as e:
-        return f"Error retrieving current UTC date: {e!s}"
+
+    with tracer.start_as_current_span("get_current_utc_date"):
+        logger.info("Retrieving current UTC date and time")
+        try:
+            current_utc = datetime.now(timezone.utc)
+            return f"Current UTC Date/Time: {current_utc.isoformat()}"
+        except Exception as e:
+            logger.error("Error retrieving current UTC date: %s", e)
+            return f"Error retrieving current UTC date: {e!s}"
 
 
 async def run_http_server() -> None:
