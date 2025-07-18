@@ -7,6 +7,7 @@ using Model Context Protocol (MCP) tools and provides a REST API for chat.
 To run: python app.py
 REST API available at: http://127.0.0.1:8006
 """
+
 import logging
 import os
 import sys
@@ -29,7 +30,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from mcp_client_sales_analysis import MCPClient  # type: ignore
 from opentelemetry import trace
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from otlp import configure_oltp_grpc_tracing
+from otlp import configure_oltp_grpc_tracing  # type: ignore
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities
 
@@ -48,6 +49,7 @@ RESPONSE_TIMEOUT_SECONDS = 60
 trace_scenario = "Zava Agent Initialization"
 tracer = trace.get_tracer("zava_agent.tracing")
 mcp_client = MCPClient.create_default()
+
 
 class AgentManager:
     """Manages Azure AI Agent lifecycle and dependencies."""
@@ -123,8 +125,7 @@ class AgentManager:
                 logger.info("Creating agent...")
                 if not Config.MODEL_DEPLOYMENT_NAME:
                     logger.error("Config.MODEL_DEPLOYMENT_NAME must not be None")
-                    raise ValueError(
-                        "Config.MODEL_DEPLOYMENT_NAME must not be None")
+                    raise ValueError("Config.MODEL_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
@@ -197,6 +198,7 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 # FastAPI app with lifespan
 app = FastAPI(title="Azure AI Agent Service", lifespan=lifespan)
 
+
 @app.get("/health")
 async def health_check() -> Dict[str, Any]:
     """Health check endpoint."""
@@ -247,11 +249,12 @@ async def serve_file(filename: str) -> FileResponse:
 
     return FileResponse(path=str(file_path))
 
+
 FastAPIInstrumentor.instrument_app(app)
 
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.environ.get('PORT', 8111))
+    port = int(os.environ.get("PORT", 8111))
     logger.info("Starting agent service on port %d", port)
     uvicorn.run(app, host="127.0.0.1", port=port)
