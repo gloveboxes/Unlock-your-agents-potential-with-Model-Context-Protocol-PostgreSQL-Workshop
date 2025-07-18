@@ -142,14 +142,20 @@ async def get_multiple_table_schemas(
             "retail.inventory",
         }
 
-    logger.info("Manager ID: %s", rls_user_id)
-    logger.info("Retrieving schemas for tables: %s", ", ".join(table_names))
+        # Validate table names
+        invalid_tables = [name for name in table_names if name not in valid_tables]
+        if invalid_tables:
+            logger.error("Invalid table names: %s. Valid tables are: %s", invalid_tables, sorted(valid_tables))
+            return f"Error: Invalid table names: {invalid_tables}. Valid tables are: {sorted(valid_tables)}"
 
-    try:
-        provider = get_db_provider()
-        return await provider.get_table_metadata_from_list(table_names, rls_user_id=rls_user_id)
-    except Exception as e:
-        return f"Error retrieving table schemas: {e!s}"
+        logger.info("Manager ID: %s", rls_user_id)
+        logger.info("Retrieving schemas for tables: %s", ", ".join(table_names))
+
+        try:
+            provider = get_db_provider()
+            return await provider.get_table_metadata_from_list(table_names, rls_user_id=rls_user_id)
+        except Exception as e:
+            return f"Error retrieving table schemas: {e!s}"
 
 
 @mcp.tool()
