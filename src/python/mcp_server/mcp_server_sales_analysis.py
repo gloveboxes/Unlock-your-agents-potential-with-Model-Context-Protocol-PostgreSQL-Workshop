@@ -126,9 +126,6 @@ async def get_multiple_table_schemas(
 
     rls_user_id = get_rls_user_id(ctx)
 
-    if not table_names:
-        return "Error: table_names parameter is required and cannot be empty"
-
     with tracer.start_as_current_span("get_multiple_table_schemas"):
         if not table_names:
             logger.error("table_names parameter is required and cannot be empty")
