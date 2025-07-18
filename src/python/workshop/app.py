@@ -255,6 +255,6 @@ FastAPIInstrumentor.instrument_app(app)
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.environ.get("PORT", 8111))
+    port = int(os.environ.get("PORT", 8006))
     logger.info("Starting agent service on port %d", port)
     uvicorn.run(app, host="127.0.0.1", port=port)
