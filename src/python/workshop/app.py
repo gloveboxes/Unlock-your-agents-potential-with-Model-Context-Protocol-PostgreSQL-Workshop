@@ -39,7 +39,10 @@ from utilities import Utilities
 tracer = configure_oltp_grpc_tracing()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-# Utilities.suppress_logs()
+
+# Suppress verbose Azure SDK logs if OTEL endpoint is not configured (since we're logging to console)
+if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT") is None:
+    Utilities.suppress_logs()
 
 # Agent Instructions
 INSTRUCTIONS_FILE = "instructions/mcp_server_tools_with_code_interpreter.txt"
