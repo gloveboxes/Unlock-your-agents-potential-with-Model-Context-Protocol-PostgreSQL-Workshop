@@ -41,7 +41,7 @@ BACKUP_FILE_NEW="/docker-entrypoint-initdb.d/backups/zava_retail_2025_07_14_post
 
 echo "🔍 Checking for backup files..."
 echo "📁 Contents of backup directory:"
-ls -la /docker-entrypoint-initdb.d/ || echo "Backup directory not found"
+ls -la /docker-entrypoint-initdb.d/backups/ || echo "Backup directory not found"
 
 # Check file permissions and existence
 if [ -d "/docker-entrypoint-initdb.d/backups" ]; then
@@ -227,44 +227,59 @@ EOSQL
         psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "zava" <<-EOSQL
             -- Re-enable RLS on all tables and recreate policies
             DO \$\$
+            DECLARE
+                has_rls_column boolean;
             BEGIN
-                -- Enable RLS on customers table and recreate policy
-                ALTER TABLE retail.customers ENABLE ROW LEVEL SECURITY;
-                DROP POLICY IF EXISTS customers_manager_policy ON retail.customers;
-                CREATE POLICY customers_manager_policy ON retail.customers
-                    FOR ALL TO store_manager
-                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
-                RAISE NOTICE 'Enabled RLS and recreated policy on customers table';
+                -- Check if rls_user_id column exists in customers table
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_schema = 'retail' 
+                    AND table_name = 'customers' 
+                    AND column_name = 'rls_user_id'
+                ) INTO has_rls_column;
                 
-                -- Enable RLS on orders table and recreate policy
-                ALTER TABLE retail.orders ENABLE ROW LEVEL SECURITY;
-                DROP POLICY IF EXISTS orders_manager_policy ON retail.orders;
-                CREATE POLICY orders_manager_policy ON retail.orders
-                    FOR ALL TO store_manager
-                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
-                RAISE NOTICE 'Enabled RLS and recreated policy on orders table';
-                
-                -- Enable RLS on order_items table and recreate policy
-                ALTER TABLE retail.order_items ENABLE ROW LEVEL SECURITY;
-                DROP POLICY IF EXISTS order_items_manager_policy ON retail.order_items;
-                CREATE POLICY order_items_manager_policy ON retail.order_items
-                    FOR ALL TO store_manager
-                    USING (EXISTS (
-                        SELECT 1 FROM retail.orders o 
-                        WHERE o.order_id = order_items.order_id 
-                        AND o.rls_user_id = current_setting('app.current_rls_user_id')::integer
-                    ));
-                RAISE NOTICE 'Enabled RLS and recreated policy on order_items table';
-                
-                -- Enable RLS on inventory table and recreate policy
-                ALTER TABLE retail.inventory ENABLE ROW LEVEL SECURITY;
-                DROP POLICY IF EXISTS inventory_manager_policy ON retail.inventory;
-                CREATE POLICY inventory_manager_policy ON retail.inventory
-                    FOR ALL TO store_manager
-                    USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
-                RAISE NOTICE 'Enabled RLS and recreated policy on inventory table';
-                
-                RAISE NOTICE 'Successfully re-enabled RLS and recreated all policies';
+                IF has_rls_column THEN
+                    -- Enable RLS on customers table and recreate policy
+                    ALTER TABLE retail.customers ENABLE ROW LEVEL SECURITY;
+                    DROP POLICY IF EXISTS customers_manager_policy ON retail.customers;
+                    CREATE POLICY customers_manager_policy ON retail.customers
+                        FOR ALL TO store_manager
+                        USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
+                    RAISE NOTICE 'Enabled RLS and recreated policy on customers table';
+                    
+                    -- Enable RLS on orders table and recreate policy
+                    ALTER TABLE retail.orders ENABLE ROW LEVEL SECURITY;
+                    DROP POLICY IF EXISTS orders_manager_policy ON retail.orders;
+                    CREATE POLICY orders_manager_policy ON retail.orders
+                        FOR ALL TO store_manager
+                        USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
+                    RAISE NOTICE 'Enabled RLS and recreated policy on orders table';
+                    
+                    -- Enable RLS on order_items table and recreate policy
+                    ALTER TABLE retail.order_items ENABLE ROW LEVEL SECURITY;
+                    DROP POLICY IF EXISTS order_items_manager_policy ON retail.order_items;
+                    CREATE POLICY order_items_manager_policy ON retail.order_items
+                        FOR ALL TO store_manager
+                        USING (EXISTS (
+                            SELECT 1 FROM retail.orders o 
+                            WHERE o.order_id = order_items.order_id 
+                            AND o.rls_user_id = current_setting('app.current_rls_user_id')::integer
+                        ));
+                    RAISE NOTICE 'Enabled RLS and recreated policy on order_items table';
+                    
+                    -- Enable RLS on inventory table and recreate policy
+                    ALTER TABLE retail.inventory ENABLE ROW LEVEL SECURITY;
+                    DROP POLICY IF EXISTS inventory_manager_policy ON retail.inventory;
+                    CREATE POLICY inventory_manager_policy ON retail.inventory
+                        FOR ALL TO store_manager
+                        USING (rls_user_id = current_setting('app.current_rls_user_id')::integer);
+                    RAISE NOTICE 'Enabled RLS and recreated policy on inventory table';
+                    
+                    RAISE NOTICE 'Successfully re-enabled RLS and recreated all policies';
+                ELSE
+                    RAISE NOTICE 'RLS column rls_user_id not found, skipping RLS policy creation';
+                    RAISE NOTICE 'Tables can still be accessed normally without RLS restrictions';
+                END IF;
             EXCEPTION
                 WHEN OTHERS THEN
                     RAISE WARNING 'Error during RLS re-enablement: %', SQLERRM;
@@ -277,52 +292,16 @@ EOSQL
         psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "zava" <<-EOSQL
             -- Re-grant permissions on all tables and sequences in retail schema
             GRANT USAGE ON SCHEMA retail TO store_manager;
-            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA retail TO "$POSTGRES_USER";
-            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA retail TO "$POSTGRES_USER";
-            -- RAISE NOTICE 'Re-granted permissions to "$POSTGRES_USER" after restoration';
-EOSQL
-    else
-        echo "⚠️  Database restoration failed or no backup found"
-        echo "📋 Database 'zava' created but no data restored."
-        echo ""
-        echo "� Attempting to generate fresh data automatically..."
-        
-        # Try to generate data using the Python script
-        if [ -f "/workspace/src/shared/database/data-generator/generate_zava_postgres.py" ]; then
-            echo "📊 Found data generator script, attempting to create fresh data..."
-            cd /workspace/src/shared/database/data-generator
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA retail TO store_manager;
+            GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA retail TO store_manager;
             
-            # Check if required Python packages are available
-            if python3 -c "import asyncpg, asyncio" 2>/dev/null; then
-                echo "✅ Required Python packages found"
-                echo "🚀 Generating fresh data (this may take a few minutes)..."
-                
-                if python3 generate_zava_postgres.py --num-customers 10000 2>&1; then
-                    echo "✅ Fresh data generation completed successfully!"
-                    echo "🎯 Database is now ready for use!"
-                    
-                    # Re-grant permissions after data generation
-                    echo "🔑 Granting permissions to store_manager for generated data..."
-                    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "zava" <<-EOSQL
-                        GRANT USAGE ON SCHEMA retail TO store_manager;
-                        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA retail TO store_manager;
-                        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA retail TO store_manager;
-                        RAISE NOTICE 'Granted permissions to store_manager for generated data';
+            DO \$\$
+            BEGIN
+                RAISE NOTICE 'Re-granted permissions to store_manager after restoration';
+            END
+            \$\$;
 EOSQL
-                else
-                    echo "❌ Fresh data generation failed"
-                    echo "💡 You can manually generate data later using:"
-                    echo "   cd /workspace/src/shared/database/data-generator"
-                    echo "   python3 generate_zava_postgres.py --num-customers 10000"
-                fi
-            else
-                echo "❌ Required Python packages not available"
-                echo "💡 You can manually generate data later using: /workspace/scripts/generate_fresh_data.sh"
-            fi
-        else
-            echo "❌ Data generator script not found"
-            echo "💡 You can manually generate data using: /workspace/scripts/generate_fresh_data.sh"
-        fi
+ 
     fi
 else
     echo "⚠️  No backup files found"
