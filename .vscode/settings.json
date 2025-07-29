@@ -6,6 +6,11 @@
             ]
         }
     },
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true
+    },
     "python.analysis.extraPaths": [
         "./src/python/workshop"
     ],
@@ -17,8 +22,7 @@
         "8006": {
             "label": "Agent Service",
             "onAutoForward": "silent"
-        }
-        ,
+        },
         "8000": {
             "label": "Agent Service",
             "onAutoForward": "silent"

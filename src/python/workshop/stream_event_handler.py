@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from azure.ai.agents.aio import AgentsClient
 from azure.ai.agents.models import (
@@ -12,6 +13,7 @@ from azure.ai.agents.models import (
 )
 from utilities import Utilities
 
+logger = logging.getLogger(__name__)
 
 class WebStreamEventHandler(AsyncAgentEventHandler[str]):
     """Handle LLM streaming events and tokens for web interface output."""
@@ -45,11 +47,11 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
     async def on_thread_run(self, run: ThreadRun) -> None:
         """Handle thread run events"""
 
-        print(f"Run status: {run.status}, ID: {run.id}")
+        logger.info("Run status: %s, ID: %s", run.status, run.id)
         if run.status == RunStatus.FAILED:
-            print(f"Run failed. Error: {run.last_error}")
-            print(f"Thread ID: {run.thread_id}")
-            print(f"Run ID: {run.id}")
+            logger.error("Run failed. Error: %s", run.last_error)
+            logger.error("Thread ID: %s", run.thread_id)
+            logger.error("Run ID: %s", run.id)
 
     async def on_run_step(self, step: RunStep) -> None:
         pass
@@ -58,7 +60,7 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
         pass
 
     async def on_error(self, data: str) -> None:
-        print(f"An error occurred. Data: {data}")
+        logger.error("An error occurred. Data: %s", data)
 
     async def on_done(self) -> None:
         """Handle stream completion."""
@@ -66,4 +68,4 @@ class WebStreamEventHandler(AsyncAgentEventHandler[str]):
 
     async def on_unhandled_event(self, event_type: str, event_data: object) -> None:
         """Handle unhandled events."""
-        print(f"Unhandled Event Type: {event_type}")
+        logger.warning("Unhandled Event Type: %s", event_type)
