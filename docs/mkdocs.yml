@@ -17,9 +17,9 @@ nav:
   - Lab 3 Service Monitoring: lab-4-monitoring.md
   - Lab 4 Continuous Evaluation: lab-5-continuous-evaluation.md
   - Lab 5 Trace & Observe Agents: lab-5-tracing.md
-  - Home Work
-    - Lab 6 (Optional) Debugging MCPs with Dev Tunnel: lab-1-start-mcp-server.md
-  - Lab 7 Finishing Up: lab-6-finishing-up.md
+  - Lab 6 Finishing Up: lab-6-finishing-up.md
+  - Home Work:
+    - Debugging with Dev Tunnel: lab-1-start-mcp-server.md
   - Summary: summary.md
   - Resources: resources.md
   - About: about.md
