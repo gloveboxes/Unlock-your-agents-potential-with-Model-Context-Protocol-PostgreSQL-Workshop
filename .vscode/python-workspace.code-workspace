@@ -50,7 +50,7 @@
 			{
 				"name": "Debug Compound: Agent and MCP (http)",
 				"configurations": [
-					"Debug: MCP Sales Server",
+					"Debug: MCP Server Sales Analysis",
 					"Debug: Agent Manager (http)",
 					"Debug: Web App"
 				],
@@ -100,7 +100,7 @@
 				"justMyCode": true
 			},
 			{
-				"name": "Debug: MCP Sales Server",
+				"name": "Debug: MCP Server Sales Analysis",
 				"type": "debugpy",
 				"request": "launch",
 				"program": "mcp_server_sales_analysis.py",
