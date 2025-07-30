@@ -32,7 +32,7 @@ This lab uses the Streamable HTTP transport interface to integrate with the Azur
 1. Next, in the terminal where the MCP server is running, start a DevTunnel by running:
 
     ```bash
-    devtunnel host -p 8010 --allow-anonymous
+    devtunnel host -p 8000 --allow-anonymous
     ```
 
     This will output a URL that you'll need for the agent to connect to the MCP server. The output will be similar to:
