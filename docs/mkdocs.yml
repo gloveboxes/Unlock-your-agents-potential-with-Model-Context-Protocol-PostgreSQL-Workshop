@@ -30,6 +30,8 @@ nav:
 plugins:
   - glightbox
   - include-markdown
+  - timetoread:
+      wpm: 150
 
 theme:
   name: material
