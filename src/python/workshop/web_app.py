@@ -44,7 +44,8 @@ class WebApp:
     
     def _setup_static_files(self) -> None:
         """Setup static file serving."""
-        static_dir = Path(__file__).parent.parent.parent / "shared" / "static"
+        # Use absolute path since parent navigation isn't working as expected
+        static_dir = Path("/workspace/src/shared/static")
         self.app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     
     def _setup_routes(self) -> None:
@@ -58,13 +59,13 @@ class WebApp:
     
     async def get_chat_page(self) -> HTMLResponse:
         """Serve the chat HTML page."""
-        html_file = Path(__file__).parent.parent.parent / "shared" / "static" / "index.html"
+        html_file = Path("/workspace/src/shared/static/index.html")
         with html_file.open("r") as f:
             return HTMLResponse(content=f.read())
     
     async def get_favicon(self) -> FileResponse:
         """Serve the favicon.ico file."""
-        favicon_path = Path(__file__).parent.parent.parent / "shared" / "static" / "favicon.ico"
+        favicon_path = Path("/workspace/src/shared/static/favicon.ico")
         return FileResponse(favicon_path, media_type="image/x-icon")
     
     async def upload_file(self, file: UploadFile, message: str = Form(None)) -> Dict:

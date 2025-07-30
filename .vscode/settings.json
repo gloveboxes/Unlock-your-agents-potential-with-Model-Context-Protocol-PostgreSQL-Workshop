@@ -23,5 +23,6 @@
             "label": "Agent Service",
             "onAutoForward": "silent"
         }
-    }
+    },
+    "peacock.remoteColor": "#dd0531"
 }

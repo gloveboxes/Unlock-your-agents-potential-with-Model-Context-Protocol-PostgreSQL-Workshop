@@ -8,4 +8,4 @@ Select your workshop experience:
 
 === "Self-Guided Learners"
 
-    {% include-markdown "includes/introduction-self-guided.md" %}
+    {% include-markdown "includes/introduction-self-guided-azure.md" %}

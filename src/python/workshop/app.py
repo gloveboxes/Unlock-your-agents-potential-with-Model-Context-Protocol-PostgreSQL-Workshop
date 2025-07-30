@@ -8,14 +8,20 @@ To run: python app.py
 REST API available at: http://127.0.0.1:8006
 """
 
+import os
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent / "mcp_server"))
+# Add mcp_server to Python path - robust approach for different execution contexts
+current_file = Path(__file__).resolve()
+current_dir = current_file.parent
+
+# Primary path: workshop/../mcp_server
+mcp_server_path = current_dir.parent / "mcp_server"
+sys.path.insert(0, str(mcp_server_path))
+
 import logging
-import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Any, AsyncGenerator, Dict
 
 from azure.ai.agents.aio import AgentsClient
