@@ -12,6 +12,9 @@
 	],
 	"settings": {
 		"peacock.remoteColor": "#3776AB",
+		"files.exclude": {
+			"**/__pycache__": true
+		},
 		"workbench.colorCustomizations": {
 			"activityBar.activeBackground": "#4f90c6",
 			"activityBar.background": "#4f90c6",
