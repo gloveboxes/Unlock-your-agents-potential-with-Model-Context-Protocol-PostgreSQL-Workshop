@@ -26,6 +26,36 @@ body {
     text-align: center;
 }
 
+.clear-btn {
+    padding: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+    background: #c82333;
+    transform: scale(1.05);
+}
+
+.clear-btn:active {
+    transform: scale(0.95);
+}
+
+.clear-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
 .messages {
     flex: 1;
     overflow-y: auto;
@@ -269,4 +299,98 @@ body {
 
 .assistant a:hover {
     text-decoration: underline;
+}
+
+/* Service status messages */
+.service-status {
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin: 10px 0 !important;
+    font-weight: 500;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Disabled input state */
+#messageInput:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+#messageInput:disabled::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Typing indicator styles */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px !important;
+    background: #f8f9fa !important;
+    border: 1px solid #e9ecef;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.typing-animation {
+    display: flex;
+    gap: 4px;
+}
+
+.typing-animation .dot {
+    width: 8px;
+    height: 8px;
+    background: #6c757d;
+    border-radius: 50%;
+    animation: typingDots 1.5s infinite;
+}
+
+.typing-animation .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-animation .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+.typing-text {
+    color: #6c757d;
+    font-style: italic;
+    font-size: 14px;
+}
+
+@keyframes typingDots {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.4;
+    }
+    30% {
+        transform: translateY(-10px);
+        opacity: 1;
+    }
+}
+
+/* Enhanced button states */
+#sendBtn:disabled {
+    background: #6c757d !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+#sendBtn.processing {
+    background: #28a745;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }

@@ -54,6 +54,7 @@ class WebApp:
         self.app.get("/favicon.ico", response_class=FileResponse)(self.get_favicon)
         self.app.post("/upload")(self.upload_file)
         self.app.get("/chat/stream")(self.stream_chat)
+        self.app.delete("/chat/clear")(self.clear_chat)
         self.app.get("/files/{filename}")(self.serve_file)
         self.app.get("/health")(self.health_check)
     
@@ -191,11 +192,43 @@ class WebApp:
         except Exception as e:
             yield f"data: {json.dumps({'error': f'Streaming error: {e!s}'})}\n\n"
     
+    async def clear_chat(self) -> Dict:
+        """Clear chat history and call agent service to delete thread."""
+        try:
+            # Clear local chat sessions
+            self.chat_sessions.clear()
+            
+            # Call agent service to clear thread
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.delete(f"{AGENT_SERVICE_URL}/chat/clear")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return {
+                        "status": "success",
+                        "message": "Chat cleared successfully",
+                        "agent_response": result
+                    }
+                return {
+                    "status": "error",
+                    "message": f"Agent service error: {response.status_code}"
+                }
+        except httpx.RequestError as e:
+            return {
+                "status": "error", 
+                "message": f"Connection error to agent service: {e!s}"
+            }
+        except Exception as e:
+            return {
+                "status": "error",
+                "message": f"Error clearing chat: {e!s}"
+            }
+    
     async def serve_file(self, filename: str) -> FileResponse:
         """Proxy file serving to agent service or serve locally."""
         try:
             # Try to proxy to agent service first
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.get(f"{AGENT_SERVICE_URL}/files/{filename}")
                 if response.status_code == 200:
                     # Save file temporarily and serve it
@@ -226,7 +259,7 @@ class WebApp:
         web_status = {"status": "healthy", "service": "web_interface"}
         
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.get(f"{AGENT_SERVICE_URL}/health")
                 if response.status_code == 200:
                     agent_status = response.json()

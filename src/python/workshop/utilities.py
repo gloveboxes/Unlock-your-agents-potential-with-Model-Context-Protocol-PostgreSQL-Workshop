@@ -41,7 +41,8 @@ class Utilities:
             print("\n🔧 To fix this issue, please run the following command:")
             print(f"{tc.CYAN}Azure CLI:{tc.RESET}")
             print("   az login --use-device-code")
-            print(f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
+            print(
+                f"\n{tc.YELLOW}After authentication, run the program again.{tc.RESET}")
             raise e
 
     @property
@@ -116,7 +117,8 @@ class Utilities:
         elif message.attachments:
             for index, attachment in enumerate(message.attachments, start=0):
                 attachment_name = (
-                    "unknown" if not message.file_path_annotations else message.file_path_annotations[index].text
+                    "unknown" if not message.file_path_annotations else message.file_path_annotations[
+                        index].text
                 )
                 if attachment.file_id:
                     file_info = await self.get_file(agents_client, attachment.file_id, attachment_name)
@@ -152,7 +154,7 @@ class Utilities:
         self.log_msg_purple("Vector store created and files added.")
         return vector_store
 
-    async def cleanup_agent_resources(
+    async def delete_thread_resource(
         self, agent: Optional[Agent], thread: Optional[AgentThread], agents_client_instance: Optional[AgentsClient]
     ) -> None:
         """Cleanup the Azure AI resources."""
@@ -167,9 +169,7 @@ class Utilities:
                 await agents_client_instance.threads.delete(thread.id)
 
                 # Clean up agent
-                await agents_client_instance.delete_agent(agent.id)
-
-                self.log_msg_green("✅ Agent resources cleaned up successfully")
+                # await agents_client_instance.delete_agent(agent.id)
 
             except Exception as e:
                 print(f"⚠️  Warning: Error during Azure cleanup: {e}")

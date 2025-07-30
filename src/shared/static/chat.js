@@ -3,9 +3,120 @@ const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const fileBtn = document.getElementById('fileBtn');
 const fileInput = document.getElementById('fileInput');
+const clearBtn = document.getElementById('clearBtn');
 
 let isStreaming = false;
 let uploadedFile = null;
+let serviceReady = false;
+let statusCheckInterval = null;
+
+// Service status checker
+async function checkServiceStatus() {
+    try {
+        const response = await fetch('/health', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const health = await response.json();
+            const agentReady = health.agent_service?.agent_initialized === true;
+            
+            if (agentReady && !serviceReady) {
+                serviceReady = true;
+                showServiceReadyMessage();
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+                
+                // Enable UI controls
+                sendBtn.disabled = false;
+                fileBtn.disabled = false;
+                clearBtn.disabled = false;
+                messageInput.disabled = false;
+                messageInput.placeholder = 'Type your message or upload a file...';
+            } else if (!agentReady && serviceReady) {
+                serviceReady = false;
+                showServiceNotReadyMessage();
+            }
+            
+            return agentReady;
+        }
+        return false;
+    } catch (error) {
+        console.log('Service check failed, retrying...', error.message);
+        return false;
+    }
+}
+
+// Show service ready message
+function showServiceReadyMessage() {
+    // Remove any existing status messages
+    const existingStatus = document.querySelector('.service-status');
+    if (existingStatus) {
+        existingStatus.remove();
+    }
+    
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'message assistant service-status';
+    statusDiv.innerHTML = '✅ <strong>Agent service is ready!</strong> You can now start chatting.';
+    statusDiv.style.background = '#d4edda';
+    statusDiv.style.color = '#155724';
+    statusDiv.style.border = '1px solid #c3e6cb';
+    messagesDiv.appendChild(statusDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Remove the message after 3 seconds
+    setTimeout(() => {
+        if (statusDiv.parentNode) {
+            statusDiv.parentNode.removeChild(statusDiv);
+        }
+    }, 3000);
+}
+
+// Show service not ready message
+function showServiceNotReadyMessage() {
+    // Remove any existing status messages
+    const existingStatus = document.querySelector('.service-status');
+    if (existingStatus) {
+        existingStatus.remove();
+    }
+    
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'message assistant service-status';
+    statusDiv.innerHTML = '⏳ <strong>Agent service is starting up...</strong> Please wait while the AI agent initializes.';
+    statusDiv.style.background = '#fff3cd';
+    statusDiv.style.color = '#856404';
+    statusDiv.style.border = '1px solid #ffeaa7';
+    messagesDiv.appendChild(statusDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Disable UI controls while not ready
+    sendBtn.disabled = true;
+    fileBtn.disabled = true;
+    clearBtn.disabled = true;
+    messageInput.disabled = true;
+    messageInput.placeholder = 'Please wait - agent service is starting up...';
+}
+
+// Start service status monitoring
+function startServiceMonitoring() {
+    // Initial check
+    checkServiceStatus().then(ready => {
+        if (!ready) {
+            showServiceNotReadyMessage();
+            // Start polling every 2 seconds
+            statusCheckInterval = setInterval(checkServiceStatus, 2000);
+        } else {
+            serviceReady = true;
+            sendBtn.disabled = false;
+            fileBtn.disabled = false;
+            clearBtn.disabled = false;
+            messageInput.disabled = false;
+        }
+    });
+}
 
 // Add message to chat
 function addMessage(content, isUser) {
@@ -15,6 +126,32 @@ function addMessage(content, isUser) {
     messagesDiv.appendChild(messageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     return messageDiv;
+}
+
+// Add typing indicator
+function addTypingIndicator() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message assistant typing-indicator';
+    typingDiv.id = 'typing-indicator';
+    typingDiv.innerHTML = `
+        <div class="typing-animation">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+        <span class="typing-text">AI is thinking...</span>
+    `;
+    messagesDiv.appendChild(typingDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    return typingDiv;
+}
+
+// Remove typing indicator
+function removeTypingIndicator() {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
 }
 
 // Add file info display
@@ -60,6 +197,12 @@ function handleFileSelection() {
 async function sendMessage() {
     const message = messageInput.value.trim();
     
+    // Check if service is ready
+    if (!serviceReady) {
+        addMessage('⚠️ Please wait - the agent service is still starting up. Try again in a moment.', false);
+        return;
+    }
+    
     // Check if we have a message or a file
     if ((!message && !uploadedFile) || isStreaming) return;
     
@@ -67,6 +210,11 @@ async function sendMessage() {
     isStreaming = true;
     sendBtn.disabled = true;
     fileBtn.disabled = true;
+    clearBtn.disabled = true;
+    
+    // Update send button to show processing state
+    const originalSendText = sendBtn.textContent;
+    sendBtn.textContent = 'Sending...';
     
     try {
         let finalMessage = message;
@@ -107,10 +255,9 @@ async function sendMessage() {
         
         messageInput.value = '';
         
-        // Add assistant message container
-        const assistantDiv = document.createElement('div');
-        assistantDiv.className = 'message assistant';
-        messagesDiv.appendChild(assistantDiv);
+        // Show typing indicator while waiting for response
+        sendBtn.textContent = 'Waiting for response...';
+        const typingIndicator = addTypingIndicator();
         
         // Use EventSource for Server-Sent Events
         const eventSource = new EventSource('/chat/stream?' + new URLSearchParams({
@@ -121,6 +268,7 @@ async function sendMessage() {
         let renderTimeout = null;
         let lastRenderLength = 0;
         let lastRenderTime = 0;
+        let assistantDiv = null;
         
         // Function to render markdown progressively
         function renderProgressiveMarkdown() {
@@ -200,12 +348,16 @@ async function sendMessage() {
                     renderTimeout = null;
                 }
                 // Render final markdown without cursor
-                assistantDiv.innerHTML = marked.parse(assistantMessage);
+                if (assistantDiv) {
+                    assistantDiv.innerHTML = marked.parse(assistantMessage);
+                }
                 eventSource.close();
                 // Re-enable input
                 isStreaming = false;
                 sendBtn.disabled = false;
                 fileBtn.disabled = false;
+                clearBtn.disabled = false;
+                sendBtn.textContent = originalSendText;
                 messageInput.focus();
                 return;
             }
@@ -213,11 +365,29 @@ async function sendMessage() {
             try {
                 const parsed = JSON.parse(event.data);
                 if (parsed.content) {
+                    // First content received - replace typing indicator with assistant div
+                    if (!assistantDiv) {
+                        removeTypingIndicator();
+                        assistantDiv = document.createElement('div');
+                        assistantDiv.className = 'message assistant';
+                        messagesDiv.appendChild(assistantDiv);
+                        sendBtn.textContent = 'Receiving...';
+                    }
+                    
                     // Handle regular text content (backward compatibility)
                     assistantMessage += parsed.content;
                     // Schedule progressive markdown rendering
                     scheduleRender();
                 } else if (parsed.type === 'text' && parsed.content) {
+                    // First content received - replace typing indicator with assistant div
+                    if (!assistantDiv) {
+                        removeTypingIndicator();
+                        assistantDiv = document.createElement('div');
+                        assistantDiv.className = 'message assistant';
+                        messagesDiv.appendChild(assistantDiv);
+                        sendBtn.textContent = 'Receiving...';
+                    }
+                    
                     // Handle new text format
                     assistantMessage += parsed.content;
                     // Schedule progressive markdown rendering
@@ -253,12 +423,23 @@ async function sendMessage() {
                         clearTimeout(renderTimeout);
                         renderTimeout = null;
                     }
+                    
+                    // Remove typing indicator if still present and create error div
+                    if (!assistantDiv) {
+                        removeTypingIndicator();
+                        assistantDiv = document.createElement('div');
+                        assistantDiv.className = 'message assistant';
+                        messagesDiv.appendChild(assistantDiv);
+                    }
+                    
                     assistantDiv.textContent = `Error: ${parsed.error}`;
                     assistantDiv.style.color = '#dc3545';
                     eventSource.close();
                     isStreaming = false;
                     sendBtn.disabled = false;
                     fileBtn.disabled = false;
+                    clearBtn.disabled = false;
+                    sendBtn.textContent = originalSendText;
                     messageInput.focus();
                 }
             } catch (e) {
@@ -273,17 +454,30 @@ async function sendMessage() {
                 clearTimeout(renderTimeout);
                 renderTimeout = null;
             }
+            
+            // Remove typing indicator if still present and create error div
+            if (!assistantDiv) {
+                removeTypingIndicator();
+                assistantDiv = document.createElement('div');
+                assistantDiv.className = 'message assistant';
+                messagesDiv.appendChild(assistantDiv);
+            }
+            
             assistantDiv.textContent = 'Connection error';
             assistantDiv.style.color = '#dc3545';
             eventSource.close();
             isStreaming = false;
             sendBtn.disabled = false;
             fileBtn.disabled = false;
+            clearBtn.disabled = false;
+            sendBtn.textContent = originalSendText;
             messageInput.focus();
         };
         
     } catch (error) {
         // Handle upload or streaming errors
+        removeTypingIndicator();
+        
         const errorDiv = document.createElement('div');
         errorDiv.className = 'message assistant';
         errorDiv.textContent = `Error: ${error.message}`;
@@ -293,6 +487,84 @@ async function sendMessage() {
         isStreaming = false;
         sendBtn.disabled = false;
         fileBtn.disabled = false;
+        clearBtn.disabled = false;
+        sendBtn.textContent = originalSendText;
+        messageInput.focus();
+    }
+}
+
+// Clear chat function
+async function clearChat() {
+    if (!serviceReady) {
+        alert('Please wait - the agent service is still starting up.');
+        return;
+    }
+    
+    if (isStreaming) {
+        alert('Please wait for the current response to finish before clearing chat.');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to clear the chat history? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        // Disable the clear button
+        clearBtn.disabled = true;
+        clearBtn.textContent = '⏳';
+        
+        // Call the clear endpoint
+        const response = await fetch('/chat/clear', {
+            method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to clear chat: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Clear the messages display
+        messagesDiv.innerHTML = '';
+        
+        // Clear any uploaded file state
+        uploadedFile = null;
+        fileInput.value = '';
+        messageInput.placeholder = 'Type your message or upload a file...';
+        
+        // Show success message briefly
+        const successDiv = document.createElement('div');
+        successDiv.className = 'message assistant';
+        successDiv.textContent = '✅ Chat cleared successfully. You can start a new conversation.';
+        successDiv.style.background = '#d4edda';
+        successDiv.style.color = '#155724';
+        successDiv.style.border = '1px solid #c3e6cb';
+        messagesDiv.appendChild(successDiv);
+        
+        // Remove success message after 3 seconds
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, 3000);
+        
+        console.log('Chat cleared:', result);
+        
+    } catch (error) {
+        console.error('Error clearing chat:', error);
+        
+        // Show error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'message assistant';
+        errorDiv.textContent = `❌ Failed to clear chat: ${error.message}`;
+        errorDiv.style.color = '#dc3545';
+        messagesDiv.appendChild(errorDiv);
+        
+    } finally {
+        // Re-enable the clear button
+        clearBtn.disabled = false;
+        clearBtn.textContent = '🗑️';
         messageInput.focus();
     }
 }
@@ -309,6 +581,12 @@ fileBtn.addEventListener('click', () => {
 });
 
 fileInput.addEventListener('change', handleFileSelection);
+
+// Clear chat event listener
+clearBtn.addEventListener('click', clearChat);
+
+// Start service monitoring on page load
+startServiceMonitoring();
 
 // Focus input on load
 messageInput.focus();

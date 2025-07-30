@@ -110,9 +110,9 @@ class AgentManager:
 
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
-                print("Creating agent...")
                 if not Config.MODEL_DEPLOYMENT_NAME:
-                    raise ValueError("Config.MODEL_DEPLOYMENT_NAME must not be None")
+                    raise ValueError(
+                        "Config.MODEL_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
                     model=Config.MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
@@ -124,13 +124,11 @@ class AgentManager:
 
                 # Enable auto function calls
                 if self.toolset.definitions and Config.MAP_MCP_FUNCTIONS:
-                    self.agents_client.enable_auto_function_calls(tools=self.toolset)
+                    self.agents_client.enable_auto_function_calls(
+                        tools=self.toolset)
                     print("Enabled auto function calls.")
 
-                # Create thread
-                print("Creating thread...")
-                self.thread = await self.agents_client.threads.create()
-                print(f"Created thread, ID: {self.thread.id}")
+                await self.create_new_thread()
 
             return True
 
@@ -138,17 +136,15 @@ class AgentManager:
             logger.error("Agent initialization failed: %s", str(e))
             return False
 
-    async def cleanup(self) -> None:
-        """Clean up agent resources."""
-        await mcp_client.close_session()
-
-        # Clean up agent resources
-        if self.agent and self.thread and self.agents_client:
-            try:
-                await self.utilities.cleanup_agent_resources(self.agent, self.thread, self.agents_client)
-                print("Agent resources cleaned up.")
-            except Exception as e:
-                print(f"Warning: Error during cleanup: {e}")
+    async def create_new_thread(self) -> None:
+        """Create a new thread and optionally clean up the old one."""
+        if not self.agents_client:
+            raise ValueError(
+                "AgentsClient is not initialized. Cannot create new thread.")
+        
+        await self.utilities.delete_thread_resource(self.agent, self.thread, self.agents_client)
+        self.thread = await self.agents_client.threads.create()
+        print(f"Created thread, ID: {self.thread.id}")
 
     @property
     def is_initialized(self) -> bool:
@@ -171,14 +167,13 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     success = await agent_manager.initialize(INSTRUCTIONS_FILE)
 
     if not success:
-        print(f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
+        print(
+            f"{tc.BG_BRIGHT_RED}Agent initialization failed. Check your configuration.{tc.RESET}")
     elif agent_manager.is_initialized and agent_manager.agent:
-        print(f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
+        print(
+            f"✅ Agent initialized successfully with ID: {agent_manager.agent.id}")
 
     yield
-
-    # Shutdown
-    await agent_manager.cleanup()
 
 
 # FastAPI app with lifespan
@@ -214,6 +209,31 @@ async def stream_chat(request: ChatRequest) -> StreamingResponse:
             "Content-Encoding": "identity",
         },
     )
+
+
+@app.delete("/chat/clear")
+async def clear_chat() -> Dict[str, Any]:
+    """Clear the current chat session and create a new thread."""
+    try:
+        if not agent_manager.is_initialized or not agent_manager.agents_client or not agent_manager.agent:
+            raise HTTPException(
+                status_code=500, detail="Agent not initialized")
+
+        await agent_manager.create_new_thread()
+        # Clear chat sessions in the service
+        agent_service.chat_sessions.clear()
+
+        return {
+            "status": "success",
+            "message": "Chat cleared and new thread created",
+        }
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"Error clearing chat: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to clear chat: {e!s}") from e
 
 
 @app.get("/files/{filename}")
