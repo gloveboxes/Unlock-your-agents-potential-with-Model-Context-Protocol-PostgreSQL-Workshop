@@ -11,14 +11,6 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from terminal_colors import TerminalColors as tc
 
-# # Add mcp_server to Python path - robust approach for different execution contexts
-# current_file = Path(__file__).resolve()
-# current_dir = current_file.parent
-
-# # Primary path: workshop/../mcp_server
-# mcp_server_path = current_dir.parent / "mcp_server"
-# sys.path.insert(0, str(mcp_server_path))
-
 
 class MCPClient:
     """Client for communicating with MCP servers."""
