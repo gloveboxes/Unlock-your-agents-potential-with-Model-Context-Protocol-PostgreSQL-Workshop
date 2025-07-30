@@ -256,7 +256,7 @@ async function sendMessage() {
         messageInput.value = '';
         
         // Show typing indicator while waiting for response
-        sendBtn.textContent = 'Waiting for response...';
+        sendBtn.textContent = 'Waiting';
         const typingIndicator = addTypingIndicator();
         
         // Use EventSource for Server-Sent Events
