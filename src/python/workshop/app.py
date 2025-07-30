@@ -8,20 +8,9 @@ To run: python app.py
 REST API available at: http://127.0.0.1:8006
 """
 
-import os
-import sys
-from pathlib import Path
-
-# Add mcp_server to Python path - robust approach for different execution contexts
-current_file = Path(__file__).resolve()
-current_dir = current_file.parent
-
-# Primary path: workshop/../mcp_server
-mcp_server_path = current_dir.parent / "mcp_server"
-sys.path.insert(0, str(mcp_server_path))
-
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, AsyncGenerator, Dict
 
 from azure.ai.agents.aio import AgentsClient
@@ -32,7 +21,7 @@ from chat_manager import ChatManager, ChatRequest
 from config import Config
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
-from mcp_client_sales_analysis import MCPClient  # type: ignore
+from mcp_client import MCPClient
 from opentelemetry import trace
 from terminal_colors import TerminalColors as tc
 from utilities import Utilities

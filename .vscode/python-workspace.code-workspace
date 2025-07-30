@@ -4,10 +4,10 @@
 			"path": "../src/python/workshop"
 		},
 		{
-			"path": "../src/shared"
+			"path": "../src/python/mcp_server"
 		},
 		{
-			"path": "../src/python/mcp_server"
+			"path": "../src/shared"
 		}
 	],
 	"settings": {
@@ -36,24 +36,24 @@
 	"launch": {
 		"version": "0.2.0",
 		"compounds": [
-        {
-            "name": "Debug Compound: Agent and MCP (stdio)",
-            "configurations": [
-                "Debug: Agent Manager (stdio)",
-                "Debug: Web App"
-            ],
-            "stopAll": true
-        },
-        {
-            "name": "Debug Compound: Agent and MCP (http)",
-            "configurations": [
-                "Debug: MCP Sales Server",
-                "Debug: Agent Manager (http)",
-                "Debug: Web App"
-            ],
-            "stopAll": true
-        },
-    ],
+			{
+				"name": "Debug Compound: Agent and MCP (stdio)",
+				"configurations": [
+					"Debug: Agent Manager (stdio)",
+					"Debug: Web App"
+				],
+				"stopAll": true
+			},
+			{
+				"name": "Debug Compound: Agent and MCP (http)",
+				"configurations": [
+					"Debug: MCP Sales Server",
+					"Debug: Agent Manager (http)",
+					"Debug: Web App"
+				],
+				"stopAll": true
+			},
+		],
 		"configurations": [
 			{
 				"name": "Debug: Agent Manager (stdio)",
