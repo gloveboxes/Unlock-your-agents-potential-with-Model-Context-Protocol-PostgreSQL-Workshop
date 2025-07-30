@@ -27,6 +27,6 @@
                 "charliermarsh.ruff"
             ]
         }
-    },
-    "postCreateCommand": "pip install --user -r src/python/workshop/requirements.txt && pip install --user -r requirements-dev.txt"
+    }
+    // "postCreateCommand": "pip install --user -r src/python/workshop/requirements.txt && pip install --user -r requirements-dev.txt"
 }
