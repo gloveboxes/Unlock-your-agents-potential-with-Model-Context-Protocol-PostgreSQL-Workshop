@@ -141,7 +141,7 @@ async def get_multiple_table_schemas(
 async def execute_sales_query(
     ctx: Context, postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")]
 ) -> str:
-    """Always fetch table schemas first, use exact column names, join related tables for clarity, aggregate results, limit output to 20 rows, and explain that results are limited for readability.
+    """Always fetch table schemas first, use exact column names, fetch current utc date for time sensitive queries, join related tables for clarity, aggregate results, limit output to 20 rows, and explain that results are limited for readability.
 
     Args:
         postgresql_query: A well-formed PostgreSQL query.
@@ -177,7 +177,9 @@ async def get_current_utc_date() -> str:
     print("Retrieving current UTC date and time")
     try:
         current_utc = datetime.now(timezone.utc)
-        return f"Current UTC Date/Time: {current_utc.isoformat()}"
+        result = f"Current UTC Date/Time: {current_utc.isoformat()}"
+        print(result)
+        return result
     except Exception as e:
         return f"Error retrieving current UTC date: {e!s}"
 
