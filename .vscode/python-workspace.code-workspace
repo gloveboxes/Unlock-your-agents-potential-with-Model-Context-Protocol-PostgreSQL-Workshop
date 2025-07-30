@@ -8,9 +8,6 @@
 		},
 		{
 			"path": "../src/python/mcp_server"
-		},
-		{
-			"path": "../src/python/web_app"
 		}
 	],
 	"settings": {
