@@ -585,6 +585,21 @@ fileInput.addEventListener('change', handleFileSelection);
 // Clear chat event listener
 clearBtn.addEventListener('click', clearChat);
 
+// Clear chat on page refresh/unload to clean up agent thread
+window.addEventListener('beforeunload', (e) => {
+    // Use fetch with keepalive for DELETE request during page unload
+    try {
+        fetch('/chat/clear', {
+            method: 'DELETE',
+            keepalive: true
+        }).catch(() => {
+            // Ignore errors during page unload
+        });
+    } catch (error) {
+        console.log('Failed to clear chat on page unload:', error);
+    }
+});
+
 // Start service monitoring on page load
 startServiceMonitoring();
 
