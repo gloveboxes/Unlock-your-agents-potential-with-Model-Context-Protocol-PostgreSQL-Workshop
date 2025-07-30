@@ -512,7 +512,7 @@ async function clearChat() {
     try {
         // Disable the clear button
         clearBtn.disabled = true;
-        clearBtn.textContent = '⏳';
+        clearBtn.textContent = 'Clearing...';
         
         // Call the clear endpoint
         const response = await fetch('/chat/clear', {
@@ -564,7 +564,7 @@ async function clearChat() {
     } finally {
         // Re-enable the clear button
         clearBtn.disabled = false;
-        clearBtn.textContent = '🗑️';
+        clearBtn.textContent = 'Clear';
         messageInput.focus();
     }
 }
