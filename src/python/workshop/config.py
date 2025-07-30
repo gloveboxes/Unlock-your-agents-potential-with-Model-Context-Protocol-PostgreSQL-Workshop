@@ -16,7 +16,7 @@ class Config:
     # Azure configuration - loaded from environment variables
     MODEL_DEPLOYMENT_NAME: Optional[str] = os.getenv("MODEL_DEPLOYMENT_NAME")
     PROJECT_ENDPOINT: str = os.environ["PROJECT_ENDPOINT"]
-    DEV_TUNNEL_URL: str = url + "/mcp/" if (url := os.getenv("DEV_TUNNEL_URL")) else ""
+    DEV_TUNNEL_URL: str = url + "/mcp" if (url := os.getenv("DEV_TUNNEL_URL")) else ""
     RLS_USER_ID: str = os.getenv("RLS_USER_ID", "00000000-0000-0000-0000-000000000000")  # Default to Group Access ID
 
     # Model parameters
