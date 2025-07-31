@@ -38,137 +38,51 @@ You need to authenticate with Azure so the agent app can access the Azure AI Age
 
 ## Deploy the Azure Resources
 
-The following resources will be created in the **rg-zava-agent-wks-**** resource group in your Azure subscription.
+The following resources will be created in the **rg-zava-agent-wks-nnnn** resource group in your Azure subscription.
 
-- An **Azure AI Foundry hub** named **fdy-zava-agent-wks-****
-- An **Azure AI Foundry project** named **prj-zava-agent-wks-****
-- A **Serverless (pay-as-you-go) Models**. See pricing details [here](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/){:target="_blank"}.
+- An **Azure AI Foundry hub** named **fdy-zava-agent-wks-nnnn**
+- An **Azure AI Foundry project** named **prj-zava-agent-wks-nnnn**
+- **Serverless (pay-as-you-go) Models**:
     - GPT-4o Mini model deployment named **gpt-4o-mini**. 
-    - text-embedding-3-small and a text embedding model named **text-embedding-3-small**.
+    - Text-embedding-3-small model named **text-embedding-3-small**.
+    - See pricing details [here](https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/){:target="_blank"}.
 
 !!! warning "You will need 120K TPM quota availability for the gpt-4o Global Standard SKU, due to the frequency of calls made by the agent to the model. Review your quota availability in the [AI Foundry Management Center](https://ai.azure.com/managementCenter/quota){:target="_blank"}."
 
 We have provided a bash script to automate the deployment of the resources required for the workshop. Alternatively, you may deploy resources manually using Azure AI Foundry studio. Select the desired tab.
 
-=== "Automated deployment"
+### Automated Deployment
 
-    The script `deploy.sh` deploys to the `westus` region by default; edit the file to change the region or resource names. To run the script, open the VS Code terminal and run the following command:
+The `deploy.sh` script deploys resources to the `westus` region by default. To run the script, open the VS Code terminal and run the following command:
+
+```bash
+cd infra && ./deploy.sh
+```
+
+<!-- !!! note "On Windows, run `deploy.ps1` instead of `deploy.sh`" -->
+
+### Workshop Configuration
+
+=== "Python"
+
+    The deploy script generates the **.env** file, which contains the project endpoint, model deployment name, and Bing connection name. 
+    
+    You'll see this file when you open the Python workspace in VS Code. Your **.env** file will look similar to this but with your project endpoint.
+
+    ```python
+    PROJECT_ENDPOINT="<your_project_endpoint>"
+    GPT_MODEL_DEPLOYMENT_NAME="<your_model_deployment_name>"
+    EMBEDDING_MODEL_DEPLOYMENT_NAME="<your_embedding_model_deployment_name>"
+    APPLICATIONINSIGHTS_CONNECTION_STRING="<your_application_insights_connection_string>"
+    DEV_TUNNEL_URL="<your_dev_tunnel_url>"
+    ```
+=== "C#"
+
+    The automated deployment script stores project variables securely by using the Secret Manager feature for [safe storage of app secrets in development in ASP.NET Core](https://learn.microsoft.com/aspnet/core/security/app-secrets){:target="_blank"}.
+
+    You can view the secrets by running the following command after you have opened the C# workspace in VS Code:
 
     ```bash
-    cd infra && ./deploy.sh
+    dotnet user-secrets list
     ```
 
-    <!-- !!! note "On Windows, run `deploy.ps1` instead of `deploy.sh`" -->
-
-    ### Workshop Configuration
-
-    === "Python"
-
-        The deploy script generates the **.env** file, which contains the project endpoint, model deployment name, and Bing connection name. 
-        
-        You'll see this file when you open the Python workspace in VS Code. Your **.env** file will look similar to this but with your project endpoint.
-
-        ```python
-        PROJECT_ENDPOINT="<your_project_endpoint>"
-        MODEL_DEPLOYMENT_NAME="<your_model_deployment_name>"
-        DEV_TUNNEL_URL="<your_dev_tunnel_url>"
-        ```
-    === "C#"
-
-        The automated deployment script stores project variables securely by using the Secret Manager feature for [safe storage of app secrets in development in ASP.NET Core](https://learn.microsoft.com/aspnet/core/security/app-secrets){:target="_blank"}.
-
-        You can view the secrets by running the following command after you have opened the C# workspace in VS Code:
-
-        ```bash
-        dotnet user-secrets list
-        ```
-
-=== "Manual deployment"
-
-    Alternatively, if you prefer not to use the `deploy.sh` script you can deploy the resources manually using the Azure AI Foundry portal as follows:
-
-    1. Navigate to the [Azure AI Foundry](https://ai.azure.com){:target="_blank"} web portal using your browser and sign in with your account.
-    2. Select **+ Create project**.
-
-        - Name the project
-
-            ```text
-            agent-workshop
-            ```
-
-        - Create a new hub named
-
-            ```text
-            agent-workshop-hub
-            ```
-
-        - Select **Create** and wait for the project to be created.
-    3. From **My assets**, select **Models + endpoints**.
-    4. Select **Deploy Model / Deploy Base Model**.
-
-       - Select **gpt-4o** from the model list, then select **Confirm**.
-         - Name the deployment
-
-             ```text
-             gpt-4o
-             ```
-
-         - Deployment type: Select **Global Standard**.
-         - Select **Customize**.
-         - Model version: Select **2024-08-06**.
-         - Tokens Per Minute Rate Limit: Select **120k**.
-         - Select **Deploy**.
-
-        Repeat this process and deploy the **text-embedding-3-small** named **text-embedding-3-small**
-
-    !!! note
-        A specific version of GPT-4o may be required depending on your the region where you deployed your project.
-        See [Models: Assistants (Preview)](https://learn.microsoft.com/azure/ai-services/openai/concepts/models?tabs=global-standard%2Cstandard-chat-completions#assistants-preview){:target="_blank"} for details.
-
-    ### Workshop Configuration
-
-    You'll need the project endpoint to connect the agent app to the Azure AI Foundry project. You can find this string in the Azure AI Foundry portal in the Overview page for your Project `agent-workshop` (look in the Project details section).
-
-    === "Python"
-
-        Create the workshop configuration file with the following command:
-
-        ```bash
-        cp src/python/workshop/.env.sample src/python/workshop/.env
-        ```
-
-        Then edit the file `src/python/workshop/.env` to provide the Project endpoint.
-
-    === "C#"
-
-        1. Open a new terminal window in VS Code.
-        2. Run the following command to set the C# project path $CSHARP_PROJECT_PATH variable:
-
-            ```bash
-            CSHARP_PROJECT_PATH="src/csharp/workshop/AgentWorkshop.Client/AgentWorkshop.Client.csproj"
-            ```
-
-        3. Run the following command to set the [ASP.NET Core safe secret](https://learn.microsoft.com/aspnet/core/security/app-secrets){:target="_blank"} for the project endpoint:
-
-            !!! warning "Replace `<your_project_endpoint>` with the actual connection string"
-
-            ```bash
-            dotnet user-secrets set "ConnectionStrings:AiAgentService" "<your_project_endpoint>" --project "$CSHARP_PROJECT_PATH"
-            ```
-
-        4. Run the following command to set the [ASP.NET Core safe secret](https://learn.microsoft.com/aspnet/core/security/app-secrets){:target="_blank"} for the model deployment name:
-
-            ```bash
-            dotnet user-secrets set "Azure:ModelName" "gpt-4o" --project "$CSHARP_PROJECT_PATH"
-            ```
-
-        5. Add the **Bing connection ID** to the user secrets for grounding with Bing search.
-
-            ```powershell
-            $subId = $(az account show --query id --output tsv)
-            $rgName = "rg-agent-workshop"
-            $aiAccount = "<ai_account_name>" # Replace with the actual AI account name
-            $aiProject = "<ai_project_name>" # Replace with the actual AI project name
-            $bingConnectionId = "/subscriptions/$subId/resourceGroups/$rgName/providers/Microsoft.CognitiveServices/accounts/$aiAccount/projects/$aiProject/connections/groundingwithbingsearch"
-            dotnet user-secrets set "Azure:BingConnectionId" "$bingConnectionId" --project "$CSHARP_PROJECT_PATH"
-            ```
