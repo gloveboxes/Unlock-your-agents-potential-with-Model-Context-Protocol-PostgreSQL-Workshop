@@ -20,30 +20,30 @@ In this workshop, you will create the Zava Sales Agent: a conversational agent d
 
     The app is powered by the Zava Sales Database, a [Azure Database for PostgreSQL flexible server](https://www.postgresql.org/){:target="_blank"} with pgvector extension containing comprehensive sales data for Zava's retail DIY operations. 
 
-     The database supports complex queries and analytics, enabling efficient access to sales, inventory, and customer data. PostgreSQL Row Level Security (RLS) restricts agents to only the data for their assigned stores, ensuring security and privacy.
-
-     The Model Context Protocol (MCP) server securely provides structured access to this data by dynamically retrieving database schemas, generating, and executing optimized queries based on agent requests.
+    The database supports complex queries for sales, inventory, and customer data. Row-Level Security (RLS) ensures agents access only their assigned stores.
 
 4. **MCP Server**
 
     The Model Context Protocol (MCP) server is a custom Python service that acts as a bridge between the agent and the PostgreSQL database. It handles:
 
-     - **Schema Discovery**: Automatically retrieves database schemas to help the agent understand available data.
+     - **Database Schema Discovery**: Automatically retrieves database schemas to help the agent understand available data.
      - **Query Generation**: Transforms natural language requests into SQL queries.
      - **Tool Execution**: Executes SQL queries and returns results in a format the agent can use.
-     - **Image Search**: Supports image-based product searches using vector embeddings.
      - **Time Services**: Provides time-related data for generating time-sensitive reports.
 
 ## Extending the Workshop Solution
 
-The workshop solution is highly adaptable to various scenarios, such as customer support, by modifying the database and tailoring the Foundry Agent Service instructions to suit specific use cases. It is intentionally designed to be interface-agnostic, allowing you to focus on the core functionality of the AI Agent Service with MCP integration and apply the foundational concepts to build your own conversational agent.
+The workshop is easily adaptable to use cases like customer support by updating the database and customizing Foundry Agent Service instructions.
 
 ## Best Practices Demonstrated in the App
 
 The app also demonstrates some best practices for efficiency and user experience.
 
 - **Asynchronous APIs**:
-  In the workshop sample, both the Foundry Agent Service and PostgreSQL use asynchronous APIs, optimizing resource efficiency and scalability. This design choice becomes especially advantageous when deploying the application with asynchronous web frameworks like FastAPI, ASP.NET, Chainlit, or Streamlit.
+  In the workshop sample, both the Foundry Agent Service and PostgreSQL use asynchronous APIs, optimizing resource efficiency and scalability. This design choice becomes especially advantageous when deploying the application with asynchronous web frameworks like FastAPI, ASP.NET, or Streamlit.
 
 - **Token Streaming**:
   Token streaming is implemented to improve user experience by reducing perceived response times for the LLM-powered agent app.
+
+- **Observability**:
+  The app includes built-in [tracing](https://learn.microsoft.com/azure/ai-foundry/agents/concepts/tracing){:target="_blank"} and [metrics](https://learn.microsoft.com/azure/ai-foundry/agents/how-to/metrics){:target="_blank"} to monitor agent performance, usage patterns, and latency. This enables you to identify issues and optimize the agent over time.

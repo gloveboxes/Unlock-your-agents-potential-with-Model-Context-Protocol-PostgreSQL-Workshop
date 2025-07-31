@@ -1,4 +1,9 @@
-MCP (Model Context Protocol) is an emerging open standard that allows large-language models (LLMs) to call external tools, APIs, and data sources through a consistent, well-defined interface — similar to how USB-C standardizes device connections, or [ODBC](https://en.wikipedia.org/wiki/Open_Database_Connectivity){:target "_blank"} standardizes interfaces for databases.
+MCP (Model Context Protocol) is an emerging open standard that enables large language models (LLMs) to access external tools, APIs, and data sources through a consistent interface.
+
+Technically, MCP standardizes tool discovery and access for AI agents—similar to how the OpenAPI Specification does for REST services.
+
+From a business perspective, MCP improves agility by making it easier to update or replace AI tools as your needs evolve.
+
 
 ## Benefits of MCP
 
@@ -13,18 +18,7 @@ MCP uses a client-server model to organize interactions between AI models and ex
 
 - **MCP Host:** The runtime or platform where the LLM executes (e.g., Azure AI Foundry Agent Service).
 - **MCP Client:** A library or SDK that converts the model’s tool calls or data queries into MCP‑formatted requests and forwards them to the server.
-- **MCP Server:** A service that registers tools, executes them on request, and returns results in a standard JSON format; implementations can plug in authentication, authorization, and logging as needed.
-
-### Real‑World Analogy: Restaurant Service
-
-MCP works like a restaurant:
-
-- **MCP Host:** The dining area where customers (AI models) order.
-- **MCP Client:** The waiter who takes orders and delivers them in a standard format.
-- **MCP Server:** The kitchen that prepares dishes (tools), checks for restrictions (auth/logging), and returns the meal.
-- **MCP Tools/Data:** The dishes served to the customer.
-
-Because orders are standardized, any chef (server) can fulfill them, and any customer (model) can order without custom instructions.
+- **MCP Server:** A service that registers tools, exposes them for discovery, executes them on request, and returns results in a standardized JSON format. It can be extended with authentication, authorization, and logging as needed.
 
 ### Key Components on an MCP Server
 
@@ -33,19 +27,19 @@ Because orders are standardized, any chef (server) can fulfill them, and any cus
 - **Prompts (optional)** – Versioned prompt templates the server can store for reuse across models or projects.
 - **Policies (optional)** – Limits and safety checks (rate, depth, authentication) the server enforces around each tool call.
 
-### Server Workflow
+### MCP Transports
 
-1. **Client sends a request to the model (host):** The end user or application submits a natural-language query or task to the AI model running in the MCP Host environment.
-2. **Model requests tools/data from the MCP server:** The model analyzes the request and determines if it needs external data or tool execution. It formulates a tool call or data query, which the MCP Client forwards to the MCP Server.
-3. **Server executes the tool, returns results in a standard format:** The MCP Server authenticates the request, runs the appropriate tool or data operation (e.g., database query, API call), and formats the output in a way the model can easily consume.
-4. **Model incorporates results and responds to the client:** The model integrates the tool output or data into its response, generating a final answer or action that is sent back to the original client or user.
+MCP supports multiple transport protocols for communication between clients and servers, including:
+
+- HTTP/HTTPS (streamable) – Standard web protocols, often with streaming support for real-time, scalable communication.
+- stdio – Lightweight transport for local or containerized setups, where the client and server share the same runtime.
+
+This workshop uses stdio for MCP communication to avoid network overhead—ideal for local use. In production, however, MCP servers are deployed in the cloud and should use HTTPS for scalability and security.
 
 ## Real-World Applications
 
-- **Enterprise Data Integration:** Connect LLMs to databases, CRMs, internal tools
-- **Agentic AI:** Enable autonomous agents with tool access
-- **Multi-modal Apps:** Combine text, image, and audio tools
-- **Live Data:** Bring real-time data into AI interactions
+- **Enterprise Data Integration:** Connect LLMs to databases, CRMs, internal tools.
+- **Agentic AI:** Enable autonomous agents with tool access.
 
 ## MCP in the Zava Sales Agent
 

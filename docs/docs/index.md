@@ -12,9 +12,9 @@ You need to analyze sales data to find trends, understand customer preferences, 
 
 Learn to build an AI agent that analyzes sales data, answers product questions, and helps customers find products using image search. Key topics:
 
-1. **Model Context Protocol (MCP)**: Universal access to data sources for LLMs.
-2. **LLMs with PostgreSQL via MCP**: Complex queries and image retrieval.
 3. **Azure AI Foundry**: Rapidly build and deploy AI agents with integrated tools and observability.
+1. **Azure AI Foundry Agent Service**: Build and deploy AI agents with integrated tools and observability.
+2. **Model Context Protocol (MCP)**: Connect LLMs to external tools, data, and systems for enhanced functionality.
 
 ### Just starting your AI Agents journey?
 

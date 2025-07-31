@@ -1,5 +1,3 @@
-# Getting Started
-
 Select your workshop experience:
 
 === "@event Attendees"

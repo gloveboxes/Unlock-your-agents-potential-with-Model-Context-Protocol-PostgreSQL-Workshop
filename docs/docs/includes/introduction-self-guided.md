@@ -2,6 +2,14 @@
 
 These instructions are for self-guided learners who do not have access to a pre-configured lab environment. Follow these steps to set up your environment and begin the workshop.
 
+## What you'll learn
+
+In this section, you'll learn:
+
+- About the workshop prerequisites and how to set up your environment.
+- How to select your preferred programming language for the workshop.
+- How to open the workshop in GitHub Codespaces or a local VS Code Dev Container.
+
 ## Introduction
 
 This workshop is designed to teach you about the Azure AI Agents Service and the associated SDK. It consists of multiple labs, each highlighting a specific feature of the Azure AI Agents Service. The labs are meant to be completed in order, as each one builds on the knowledge and work from the previous lab.
@@ -36,8 +44,8 @@ The preferred way to run this workshop is using GitHub Codespaces. This option p
 
 === "VS Code Dev Container"
 
-    !!! warning "Apple Silicon Users"
-        The automated deployment script you’ll be running soon isn’t supported on Apple Silicon. Please run the deployment script from Codespaces or from macOS instead of the Dev Container.
+    <!-- !!! warning "Apple Silicon Users"
+        The automated deployment script you’ll be running soon isn’t supported on Apple Silicon. Please run the deployment script from Codespaces or from macOS instead of the Dev Container. -->
 
     Alternatively, you can open the project locally using a Visual Studio Code Dev Container, which will open the project in your local VS Code development environment using the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers){:target="_blank"}.
 
