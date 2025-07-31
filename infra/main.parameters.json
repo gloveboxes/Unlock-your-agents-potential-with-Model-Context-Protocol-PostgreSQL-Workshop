@@ -2,38 +2,32 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "aiProjectName": {
-      "value": "standard-project"
-    }, 
-    "modelName": {
-      "value": "gpt-4o-mini"
+    "location": {
+      "value": "westus"
     },
-    "modelFormat": {
-      "value": "OpenAI"
+    "aiProjectFriendlyName": {
+      "value": "Zava Agent Service Workshop"
     },
-    "modelVersion": {
-      "value": "2024-07-18"
+    "aiProjectDescription": {
+      "value": "Project resources required for the Zava Agent Workshop."
     },
-    "modelSkuName": {
-      "value": "GlobalStandard"
-    },
-    "modelCapacity": {
-      "value": 50
-    },
-    "modelLocation": {
-      "value": "eastus"
-    },
-    "storageName": {
-      "value": "agent-storage"
-    },
-    "aiServicesName": {
-      "value": "agent-ai-services"
-    },
-    "aiServiceAccountResourceId": {
-      "value": ""
-    },
-    "aiServiceKind": {
-      "value": "AIServices"
+    "models": {
+      "value": [
+        {
+          "name": "gpt-4o-mini",
+          "format": "OpenAI",
+          "version": "2024-07-18",
+          "skuName": "GlobalStandard",
+          "capacity": 120
+        },
+        {
+          "name": "text-embedding-3-small",
+          "format": "OpenAI",
+          "version": "1",
+          "skuName": "GlobalStandard",
+          "capacity": 120
+        }
+      ]
     }
   }
 }

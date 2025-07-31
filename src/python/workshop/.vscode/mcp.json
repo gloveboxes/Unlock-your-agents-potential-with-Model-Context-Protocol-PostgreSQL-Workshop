@@ -4,7 +4,7 @@
 			"type": "stdio",
 			"command": "python",
 			"args": [
-				"${workspaceFolder}/../mcp_server/mcp_server_sales_analysis.py",
+				"${workspaceFolder}/../mcp_server/sales_analysis/sales_analysis.py",
 				"--stdio",
 				"--RLS_USER_ID=00000000-0000-0000-0000-000000000000"
 			]

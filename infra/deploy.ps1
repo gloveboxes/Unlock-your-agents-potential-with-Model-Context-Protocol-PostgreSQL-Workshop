@@ -2,22 +2,21 @@ Write-Host "Deploying the Azure resources..."
 
 # Define resource group parameters
 $RG_LOCATION = "westus"
-$MODEL_NAME = "gpt-4o-mini"
-$MODEL_VERSION = "2024-11-20"
 $AI_PROJECT_FRIENDLY_NAME = "Zava DIY Agent Service Workshop"
-$MODEL_CAPACITY = 140
+$RESOURCE_PREFIX = "zava-agent-wks"
+$UNIQUE_SUFFIX = -join ((65..90) + (97..122) | Get-Random -Count 4 | ForEach-Object { [char]$_ })
 
 # Deploy the Azure resources and save output to JSON
+Write-Host " Creating agent workshop resources in resource group: rg-$RESOURCE_PREFIX-$UNIQUE_SUFFIX " -BackgroundColor Red -ForegroundColor White
+$deploymentName = "azure-ai-agent-service-lab-$(Get-Date -Format 'yyyyMMddHHmmss')"
 az deployment sub create `
-  --name "azure-ai-agent-service-lab" `
+  --name "$deploymentName" `
   --location "$RG_LOCATION" `
   --template-file main.bicep `
-  --parameters `
-      aiProjectFriendlyName="$AI_PROJECT_FRIENDLY_NAME" `
-      modelName="$MODEL_NAME" `
-      modelCapacity="$MODEL_CAPACITY" `
-      modelVersion="$MODEL_VERSION" `
-      location="$RG_LOCATION" | Out-File -FilePath output.json -Encoding utf8
+  --parameters "@main.parameters.json" `
+  --parameters location="$RG_LOCATION" `
+  --parameters resourcePrefix="$RESOURCE_PREFIX" `
+  --parameters uniqueSuffix="$UNIQUE_SUFFIX" | Out-File -FilePath output.json -Encoding utf8
 
 # Parse the JSON file using native PowerShell cmdlets
 if (-not (Test-Path -Path output.json)) {
@@ -32,11 +31,11 @@ $outputs = $jsonData.properties.outputs
 $projectsEndpoint = $outputs.projectsEndpoint.value
 $resourceGroupName = $outputs.resourceGroupName.value
 $subscriptionId = $outputs.subscriptionId.value
-$aiAccountName = $outputs.aiAccountName.value
+$aiFoundryName = $outputs.aiFoundryName.value
 $aiProjectName = $outputs.aiProjectName.value
-$bingResourceName = "groundingwithbingsearch"
-
-$bingConnectionId = "/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.CognitiveServices/accounts/$aiAccountName/projects/$aiProjectName/connections/$bingResourceName"
+$azureOpenAIEndpoint = $projectsEndpoint -replace 'api/projects/.*$', ''
+$applicationInsightsConnectionString = $outputs.applicationInsightsConnectionString.value
+$applicationInsightsName = $outputs.applicationInsightsName.value
 
 if ([string]::IsNullOrEmpty($projectsEndpoint)) {
     Write-Host "Error: projectsEndpoint not found. Possible deployment failure."
@@ -46,49 +45,46 @@ if ([string]::IsNullOrEmpty($projectsEndpoint)) {
 # Set the path for the .env file
 $ENV_FILE_PATH = "../src/python/workshop/.env"
 
+# Create workshop directory if it doesn't exist
+$workshopDir = Split-Path -Parent $ENV_FILE_PATH
+if (-not (Test-Path $workshopDir)) {
+    New-Item -ItemType Directory -Path $workshopDir -Force
+}
+
 # Delete the file if it exists
 if (Test-Path $ENV_FILE_PATH) {
     Remove-Item -Path $ENV_FILE_PATH -Force
 }
 
-# Create a new file and write to it
+# Create a new workshop .env file and write to it
 @"
 PROJECT_ENDPOINT=$projectsEndpoint
-AZURE_BING_CONNECTION_ID=$bingConnectionId
-MODEL_DEPLOYMENT_NAME="$MODEL_NAME"
+GPT_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
+EMBEDDING_MODEL_DEPLOYMENT_NAME="text-embedding-3-small"
+APPLICATIONINSIGHTS_CONNECTION_STRING="$applicationInsightsConnectionString"
 "@ | Set-Content -Path $ENV_FILE_PATH
+
+# Create fresh root .env file (always overwrite)
+$ROOT_ENV_FILE_PATH = "../.env"
+@"
+AZURE_OPENAI_ENDPOINT="$azureOpenAIEndpoint"
+PROJECT_ENDPOINT="$projectsEndpoint"
+GPT_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
+EMBEDDING_MODEL_DEPLOYMENT_NAME="text-embedding-3-small"
+APPLICATIONINSIGHTS_CONNECTION_STRING="$applicationInsightsConnectionString"
+"@ | Set-Content -Path $ROOT_ENV_FILE_PATH
 
 # Set the C# project path
 $CSHARP_PROJECT_PATH = "../src/csharp/workshop/AgentWorkshop.Client/AgentWorkshop.Client.csproj"
 
-# Set the user secrets for the C# project
-dotnet user-secrets set "ConnectionStrings:AiAgentService" "$projectsEndpoint" --project "$CSHARP_PROJECT_PATH"
-dotnet user-secrets set "Azure:ModelName" "$MODEL_NAME" --project "$CSHARP_PROJECT_PATH"
-dotnet user-secrets set "Azure:BingConnectionId" "$bingConnectionId" --project "$CSHARP_PROJECT_PATH"
+# Set the user secrets for the C# project (if the project exists)
+if (Test-Path $CSHARP_PROJECT_PATH) {
+    dotnet user-secrets set "ConnectionStrings:AiAgentService" "$projectsEndpoint" --project "$CSHARP_PROJECT_PATH"
+    dotnet user-secrets set "Azure:ModelName" "gpt-4o-mini" --project "$CSHARP_PROJECT_PATH"
+}
 
 # Delete the output.json file
 Remove-Item -Path output.json -Force
-
-# Register the Bing Search resource provider
-Write-Host "Attempting to register the Bing Search provider"
-
-$providerResult = az provider register --namespace 'Microsoft.Bing'
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Bing Search registration FAILED. The attempt to register the Bing Search resource was unsuccessful, which means you cannot complete the Grounding with Bing Search lab."
-    exit 1
-}
-
-# Wait for a few seconds to allow Azure time to process the registration
-Start-Sleep -Seconds 10
-
-# Check if the provider is registered successfully
-$providerState = az provider show --namespace 'Microsoft.Bing' --query "registrationState" -o tsv
-if ($providerState -ne "Registered") {
-    Write-Host "Bing Search registration FAILED. The attempt to register the Bing Search resource was unsuccessful, which means you cannot complete the Grounding with Bing Search lab."
-    exit 1
-}
-
-Write-Host "Bing Search registration succeeded."
 
 Write-Host "Adding Azure AI Developer user role"
 
@@ -96,15 +92,49 @@ Write-Host "Adding Azure AI Developer user role"
 $subId = az account show --query id --output tsv
 $objectId = az ad signed-in-user show --query id -o tsv
 
-$roleResult = az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" `
-                        --assignee-object-id "$objectId" `
-                        --scope "subscriptions/$subId/resourceGroups/$resourceGroupName" `
-                        --assignee-principal-type 'User'
+Write-Host "Ensuring Azure AI Developer role assignment..."
 
-# Check if the command failed
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "User role assignment failed."
-    exit 1
+# Try to create the role assignment and capture the result
+try {
+    $roleResult = az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" `
+                            --assignee-object-id "$objectId" `
+                            --scope "subscriptions/$subId/resourceGroups/$resourceGroupName" `
+                            --assignee-principal-type 'User' 2>&1
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ Azure AI Developer role assignment created successfully." -ForegroundColor Green
+    }
+    else {
+        # Check if the error is about existing role assignment
+        $errorOutput = $roleResult -join " "
+        if ($errorOutput -match "RoleAssignmentExists|already exists") {
+            Write-Host "✅ Azure AI Developer role assignment already exists." -ForegroundColor Green
+        }
+        else {
+            Write-Host "❌ User role assignment failed with unexpected error:" -ForegroundColor Red
+            Write-Host $errorOutput -ForegroundColor Red
+            exit 1
+        }
+    }
+}
+catch {
+    # Handle any PowerShell exceptions
+    $errorMessage = $_.Exception.Message
+    if ($errorMessage -match "RoleAssignmentExists|already exists") {
+        Write-Host "✅ Azure AI Developer role assignment already exists." -ForegroundColor Green
+    }
+    else {
+        Write-Host "❌ User role assignment failed: $errorMessage" -ForegroundColor Red
+        exit 1
+    }
 }
 
-Write-Host "User role assignment succeeded."
+Write-Host ""
+Write-Host "🎉 Deployment completed successfully!" -ForegroundColor Green
+Write-Host ""
+Write-Host "📋 Resource Information:" -ForegroundColor Cyan
+Write-Host "  Resource Group: $resourceGroupName"
+Write-Host "  AI Project: $aiProjectName"
+Write-Host "  Foundry Resource: $aiFoundryName"
+Write-Host "  Application Insights: $applicationInsightsName"
+Write-Host ""

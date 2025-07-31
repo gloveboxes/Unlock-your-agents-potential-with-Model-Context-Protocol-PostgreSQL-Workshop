@@ -16,7 +16,7 @@ services:
       POSTGRES_PASSWORD: P@ssw0rd!
     volumes:
       - unlock-agents-zava-database:/var/lib/postgresql/data
-      - ./database:/docker-entrypoint-initdb.d/backups:ro
+      - ./data:/docker-entrypoint-initdb.d/backups:ro
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     networks:
       - unlock-agents-zava-network

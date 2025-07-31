@@ -40,7 +40,7 @@
 		"version": "0.2.0",
 		"compounds": [
 			{
-				"name": "Debug Compound: Agent and MCP (stdio)",
+				"name": "🔁🤖Debug Compound: Agent and MCP (stdio)",
 				"configurations": [
 					"Debug: Agent Manager (stdio)",
 					"Debug: Web App"
@@ -48,9 +48,9 @@
 				"stopAll": true
 			},
 			{
-				"name": "Debug Compound: Agent and MCP (http)",
+				"name": "🌎🤖Debug Compound: Agent and MCP (http)",
 				"configurations": [
-					"Debug: MCP Server Sales Analysis",
+					"❤️📡Debug: MCP Server Sales Analysis",
 					"Debug: Agent Manager (http)",
 					"Debug: Web App"
 				],
@@ -100,11 +100,11 @@
 				"justMyCode": true
 			},
 			{
-				"name": "Debug: MCP Server Sales Analysis",
+				"name": "❤️📡Debug: MCP Server Sales Analysis",
 				"type": "debugpy",
 				"request": "launch",
-				"program": "mcp_server_sales_analysis.py",
-				"cwd": "${workspaceFolder:mcp_server}",
+				"program": "sales_analysis.py",
+				"cwd": "${workspaceFolder:mcp_server}/sales_analysis",
 				"console": "integratedTerminal",
 				"args": [],
 				"env": {

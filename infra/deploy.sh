@@ -4,41 +4,48 @@ echo "Deploying the Azure resources..."
 
 # Define resource group parameters
 RG_LOCATION="westus"
-MODEL_NAME="gpt-4o-mini"
-MODEL_VERSION="2024-11-20"
 AI_PROJECT_FRIENDLY_NAME="Zava Agent Service Workshop"
-MODEL_CAPACITY=140
+RESOURCE_PREFIX="zava-agent-wks"
+UNIQUE_SUFFIX=$(head /dev/urandom | tr -dc a-z0-9 | head -c 4)
 
 # Deploy the Azure resources and save output to JSON
+echo -e "\033[1;37;41m Creating agent workshop resources in resource group: rg-$RESOURCE_PREFIX-$UNIQUE_SUFFIX \033[0m"
+echo "Starting Azure deployment..."
+DEPLOYMENT_NAME="azure-ai-agent-service-lab-$(date +%Y%m%d%H%M%S)"
 az deployment sub create \
-  --name "azure-ai-agent-service-lab" \
+  --name "$DEPLOYMENT_NAME" \
   --location "$RG_LOCATION" \
   --template-file main.bicep \
-  --parameters \
-      aiProjectFriendlyName="$AI_PROJECT_FRIENDLY_NAME" \
-      modelName="$MODEL_NAME" \
-      modelCapacity="$MODEL_CAPACITY" \
-      modelVersion="$MODEL_VERSION" \
-      location="$RG_LOCATION" > output.json
+  --parameters @main.parameters.json \
+  --parameters location="$RG_LOCATION" \
+  --parameters resourcePrefix="$RESOURCE_PREFIX" \
+  --parameters uniqueSuffix="$UNIQUE_SUFFIX" \
+  --output json > output.json
 
-# Parse the JSON file manually using grep and sed
+# Check if deployment was successful
+if [ $? -ne 0 ]; then
+  echo "Deployment failed. Check output.json for details."
+  exit 1
+fi
+
+# Parse the JSON file
 if [ ! -f output.json ]; then
   echo "Error: output.json not found."
-  exit -1
+  exit 1
 fi
 
 PROJECTS_ENDPOINT=$(jq -r '.properties.outputs.projectsEndpoint.value' output.json)
 RESOURCE_GROUP_NAME=$(jq -r '.properties.outputs.resourceGroupName.value' output.json)
 SUBSCRIPTION_ID=$(jq -r '.properties.outputs.subscriptionId.value' output.json)
-AI_SERVICE_NAME=$(jq -r '.properties.outputs.aiAccountName.value' output.json)
+AI_FOUNDRY_NAME=$(jq -r '.properties.outputs.aiFoundryName.value' output.json)
 AI_PROJECT_NAME=$(jq -r '.properties.outputs.aiProjectName.value' output.json)
-BING_RESOURCE_NAME="groundingwithbingsearch"
+AZURE_OPENAI_ENDPOINT=$(jq -r '.properties.outputs.projectsEndpoint.value' output.json | sed 's|api/projects/.*||')
+APPLICATIONINSIGHTS_CONNECTION_STRING=$(jq -r '.properties.outputs.applicationInsightsConnectionString.value' output.json)
+APPLICATION_INSIGHTS_NAME=$(jq -r '.properties.outputs.applicationInsightsName.value' output.json)
 
-BING_CONNECTION_ID="/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP_NAME/providers/Microsoft.CognitiveServices/accounts/$AI_SERVICE_NAME/projects/$AI_PROJECT_NAME/connections/$BING_RESOURCE_NAME"
-
-if [ -z "$PROJECTS_ENDPOINT" ]; then
+if [ -z "$PROJECTS_ENDPOINT" ] || [ "$PROJECTS_ENDPOINT" = "null" ]; then
   echo "Error: projectsEndpoint not found. Possible deployment failure."
-  exit -1
+  exit 1
 fi
 
 ENV_FILE_PATH="../src/python/workshop/.env"
@@ -46,47 +53,37 @@ ENV_FILE_PATH="../src/python/workshop/.env"
 # Delete the file if it exists
 [ -f "$ENV_FILE_PATH" ] && rm "$ENV_FILE_PATH"
 
+# Create workshop directory if it doesn't exist
+mkdir -p "$(dirname "$ENV_FILE_PATH")"
 
-# Write to the .env file
+# Write to the workshop .env file
 {
   echo "PROJECT_ENDPOINT=$PROJECTS_ENDPOINT"
-  echo "AZURE_BING_CONNECTION_ID=$BING_CONNECTION_ID"
-  echo "MODEL_DEPLOYMENT_NAME=\"$MODEL_NAME\""
+  echo "GPT_MODEL_DEPLOYMENT_NAME=\"gpt-4o-mini\""
+  echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
+  echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
 } > "$ENV_FILE_PATH"
+
+# Create fresh root .env file (always overwrite)
+ROOT_ENV_FILE_PATH="../.env"
+{
+  echo "AZURE_OPENAI_ENDPOINT=\"$AZURE_OPENAI_ENDPOINT\""
+  echo "PROJECT_ENDPOINT=\"$PROJECTS_ENDPOINT\""
+  echo "GPT_MODEL_DEPLOYMENT_NAME=\"gpt-4o-mini\""
+  echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
+  echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
+} > "$ROOT_ENV_FILE_PATH"
 
 CSHARP_PROJECT_PATH="../src/csharp/workshop/AgentWorkshop.Client/AgentWorkshop.Client.csproj"
 
-# Set the user secrets for the C# project
-dotnet user-secrets set "ConnectionStrings:AiAgentService" "$PROJECTS_ENDPOINT" --project "$CSHARP_PROJECT_PATH"
-dotnet user-secrets set "Azure:ModelName" "$MODEL_NAME" --project "$CSHARP_PROJECT_PATH"
-dotnet user-secrets set "Azure:BingConnectionId" "$BING_CONNECTION_ID" --project "$CSHARP_PROJECT_PATH"
+# Set the user secrets for the C# project (if the project exists)
+if [ -f "$CSHARP_PROJECT_PATH" ]; then
+  dotnet user-secrets set "ConnectionStrings:AiAgentService" "$PROJECTS_ENDPOINT" --project "$CSHARP_PROJECT_PATH"
+  dotnet user-secrets set "Azure:ModelName" "gpt-4o-mini" --project "$CSHARP_PROJECT_PATH"
+fi
 
 # Delete the output.json file
 rm -f output.json
-
-# Register the Bing Search resource provider
-echo "Attempting to register the Bing Search provider"
-
-az provider register --namespace 'Microsoft.Bing'
-
-# Check if the command succeeded based on its exit status
-if [ $? -ne 0 ]; then
-    echo "Bing Search registration FAILED. The attempt to register the Bing Search resource was unsuccessful, which means you cannot complete the Grounding with Bing Search lab."
-    exit 1
-fi
-
-# Wait for a few seconds to allow Azure time to process the registration
-sleep 10
-
-# Check if the provider is registered successfully
-provider_state=$(az provider show --namespace 'Microsoft.Bing' --query "registrationState" -o tsv)
-
-if [ "$provider_state" != "Registered" ]; then
-    echo "Bing Search registration FAILED. The attempt to register the Bing Search resource was unsuccessful, which means you cannot complete the Grounding with Bing Search lab."
-    exit 1
-fi
-
-echo "Bing Search registration succeeded."
 
 echo "Adding Azure AI Developer user role"
 
@@ -94,15 +91,33 @@ echo "Adding Azure AI Developer user role"
 subId=$(az account show --query id --output tsv)
 objectId=$(az ad signed-in-user show --query id -o tsv)
 
-az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" \
-                          --assignee-object-id "$objectId" \
-                          --scope "subscriptions/$subId/resourceGroups/$RESOURCE_GROUP_NAME" \
-                          --assignee-principal-type 'User'
+echo "Ensuring Azure AI Developer role assignment..."
 
-# Check if the command failed
-if [ $? -ne 0 ]; then
-    echo "User role assignment failed."
+# Try to create the role assignment and capture both stdout and stderr
+roleResult=$(az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" \
+                                       --assignee-object-id "$objectId" \
+                                       --scope "subscriptions/$subId/resourceGroups/$RESOURCE_GROUP_NAME" \
+                                       --assignee-principal-type 'User' 2>&1)
+
+exitCode=$?
+
+# Check if it succeeded or if the role assignment already exists
+if [ $exitCode -eq 0 ]; then
+    echo "✅ Azure AI Developer role assignment created successfully."
+elif echo "$roleResult" | grep -q "RoleAssignmentExists\|already exists"; then
+    echo "✅ Azure AI Developer role assignment already exists."
+else
+    echo "❌ User role assignment failed with unexpected error:"
+    echo "$roleResult"
     exit 1
 fi
 
-echo "User role assignment succeeded."
+echo ""
+echo "🎉 Deployment completed successfully!"
+echo ""
+echo "📋 Resource Information:"
+echo "  Resource Group: $RESOURCE_GROUP_NAME"
+echo "  AI Project: $AI_PROJECT_NAME"
+echo "  Foundry Resource: $AI_FOUNDRY_NAME"
+echo "  Application Insights: $APPLICATION_INSIGHTS_NAME"
+echo ""

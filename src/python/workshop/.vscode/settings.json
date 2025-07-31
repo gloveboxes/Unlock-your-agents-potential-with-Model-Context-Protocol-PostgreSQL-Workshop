@@ -1,5 +1,5 @@
 {
-"remote.portsAttributes": {
+    "remote.portsAttributes": {
         "8005": {
             "label": "Web App",
             "onAutoForward": "notify"
@@ -7,8 +7,7 @@
         "8006": {
             "label": "Agent Service",
             "onAutoForward": "silent"
-        }
-        ,
+        },
         "8000": {
             "label": "Agent Service",
             "onAutoForward": "silent"
