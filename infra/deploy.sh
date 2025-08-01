@@ -62,17 +62,18 @@ mkdir -p "$(dirname "$ENV_FILE_PATH")"
   echo "GPT_MODEL_DEPLOYMENT_NAME=\"gpt-4o-mini\""
   echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
   echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
+  echo "DEV_TUNNEL_URL=\"\""
 } > "$ENV_FILE_PATH"
 
 # Create fresh root .env file (always overwrite)
-ROOT_ENV_FILE_PATH="../.env"
-{
-  echo "AZURE_OPENAI_ENDPOINT=\"$AZURE_OPENAI_ENDPOINT\""
-  echo "PROJECT_ENDPOINT=\"$PROJECTS_ENDPOINT\""
-  echo "GPT_MODEL_DEPLOYMENT_NAME=\"gpt-4o-mini\""
-  echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
-  echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
-} > "$ROOT_ENV_FILE_PATH"
+# ROOT_ENV_FILE_PATH="../.env"
+# {
+#   echo "AZURE_OPENAI_ENDPOINT=\"$AZURE_OPENAI_ENDPOINT\""
+#   echo "PROJECT_ENDPOINT=\"$PROJECTS_ENDPOINT\""
+#   echo "GPT_MODEL_DEPLOYMENT_NAME=\"gpt-4o-mini\""
+#   echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
+#   echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
+# } > "$ROOT_ENV_FILE_PATH"
 
 CSHARP_PROJECT_PATH="../src/csharp/workshop/AgentWorkshop.Client/AgentWorkshop.Client.csproj"
 
@@ -93,11 +94,11 @@ objectId=$(az ad signed-in-user show --query id -o tsv)
 
 echo "Ensuring Azure AI Developer role assignment..."
 
-# Try to create the role assignment and capture both stdout and stderr
-roleResult=$(az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" \
-                                       --assignee-object-id "$objectId" \
-                                       --scope "subscriptions/$subId/resourceGroups/$RESOURCE_GROUP_NAME" \
-                                       --assignee-principal-type 'User' 2>&1)
+roleResult=$(az role assignment create \
+  --role "Azure AI Developer" \
+  --assignee "$objectId" \
+  --scope "/subscriptions/$subId/resourceGroups/$RESOURCE_GROUP_NAME/providers/Microsoft.CognitiveServices/accounts/$AI_FOUNDRY_NAME")
+echo "Role assignment result: $roleResult"
 
 exitCode=$?
 

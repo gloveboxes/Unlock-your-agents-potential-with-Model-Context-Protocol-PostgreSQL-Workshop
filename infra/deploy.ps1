@@ -72,6 +72,7 @@ PROJECT_ENDPOINT="$projectsEndpoint"
 GPT_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
 EMBEDDING_MODEL_DEPLOYMENT_NAME="text-embedding-3-small"
 APPLICATIONINSIGHTS_CONNECTION_STRING="$applicationInsightsConnectionString"
+DEV_TUNNEL_URL=""
 "@ | Set-Content -Path $ROOT_ENV_FILE_PATH
 
 # Set the C# project path
@@ -96,10 +97,10 @@ Write-Host "Ensuring Azure AI Developer role assignment..."
 
 # Try to create the role assignment and capture the result
 try {
-    $roleResult = az role assignment create --role "f6c7c914-8db3-469d-8ca1-694a8f32e121" `
-                            --assignee-object-id "$objectId" `
-                            --scope "subscriptions/$subId/resourceGroups/$resourceGroupName" `
-                            --assignee-principal-type 'User' 2>&1
+    $roleResult = az role assignment create `
+                            --role "Azure AI Developer" `
+                            --assignee "$objectId" `
+                            --scope "/subscriptions/$subId/resourceGroups/$resourceGroupName/providers/Microsoft.CognitiveServices/accounts/$aiFoundryName" 2>&1
     
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ Azure AI Developer role assignment created successfully." -ForegroundColor Green
