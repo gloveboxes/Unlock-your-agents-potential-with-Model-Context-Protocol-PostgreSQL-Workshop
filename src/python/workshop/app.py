@@ -44,9 +44,9 @@ mcp_client = MCPClient.create_default()
 class AgentManager:
     """Manages Azure AI Agent lifecycle and dependencies."""
 
-    async def _setup_tools(self) -> None:
+    async def _setup_agent_tools(self) -> None:
         """Setup MCP tools and code interpreter."""
-
+        print("Setting up Agent tools...")
         if Config.MAP_MCP_FUNCTIONS:
             function_tools = await mcp_client.build_function_tools()
             self.toolset.add(function_tools)
@@ -73,7 +73,6 @@ class AgentManager:
     def __init__(self) -> None:
         self.utilities = Utilities()
         self.agents_client: AgentsClient | None = None
-        self.project_client: AIProjectClient | None = None
         self.agent: Agent | None = None
         self.thread: AgentThread | None = None
         self.toolset = AsyncToolSet()
@@ -96,25 +95,16 @@ class AgentManager:
                 endpoint=Config.PROJECT_ENDPOINT,
             )
 
-            self.project_client = AIProjectClient(
-                credential=credential,
-                endpoint=Config.PROJECT_ENDPOINT,
-            )
-
-            # Setup tools
-            print("Setting up MCP tools...")
-            await self._setup_tools()
+            await self._setup_agent_tools()
 
             # Enable Azure Monitor Telemetry
-            configure_azure_monitor(connection_string=await self.project_client.telemetry.get_connection_string())
+            configure_azure_monitor(
+                connection_string=Config.APPLICATIONINSIGHTS_CONNECTION_STRING)
 
             with tracer.start_as_current_span(trace_scenario):
                 # Create agent
-                if not Config.MODEL_DEPLOYMENT_NAME:
-                    raise ValueError(
-                        "Config.MODEL_DEPLOYMENT_NAME must not be None")
                 self.agent = await self.agents_client.create_agent(
-                    model=Config.MODEL_DEPLOYMENT_NAME,
+                    model=Config.GPT_MODEL_DEPLOYMENT_NAME,
                     name=Config.AGENT_NAME,
                     instructions=instructions,
                     toolset=self.toolset,
@@ -126,7 +116,6 @@ class AgentManager:
                 if self.toolset.definitions and Config.MAP_MCP_FUNCTIONS:
                     self.agents_client.enable_auto_function_calls(
                         tools=self.toolset)
-                    print("Enabled auto function calls.")
 
                 await self.create_new_thread()
 
@@ -141,7 +130,7 @@ class AgentManager:
         if not self.agents_client:
             raise ValueError(
                 "AgentsClient is not initialized. Cannot create new thread.")
-        
+
         await self.utilities.delete_thread_resource(self.agent, self.thread, self.agents_client)
         self.thread = await self.agents_client.threads.create()
         print(f"Created thread, ID: {self.thread.id}")
@@ -149,7 +138,7 @@ class AgentManager:
     @property
     def is_initialized(self) -> bool:
         """Check if agent is properly initialized."""
-        return all([self.agents_client, self.project_client, self.agent, self.thread])
+        return all([self.agents_client, self.agent, self.thread])
 
 
 # Global service instance
