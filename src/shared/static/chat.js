@@ -176,6 +176,151 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// Show centered confirmation dialog
+function showCenteredConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+        
+        // Create modal dialog
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        `;
+        
+        // Create title
+        const titleElement = document.createElement('h3');
+        titleElement.textContent = title;
+        titleElement.style.cssText = `
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 18px;
+            font-weight: 600;
+        `;
+        
+        // Create message
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        messageElement.style.cssText = `
+            margin: 0 0 24px 0;
+            color: #666;
+            line-height: 1.5;
+        `;
+        
+        // Create button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        `;
+        
+        // Create cancel button
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = 'Cancel';
+        cancelButton.style.cssText = `
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #333;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 80px;
+        `;
+        
+        // Create confirm button
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = 'Clear';
+        confirmButton.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            background: #dc3545;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 80px;
+        `;
+        
+        // Add hover effects
+        cancelButton.addEventListener('mouseenter', () => {
+            cancelButton.style.backgroundColor = '#f8f9fa';
+        });
+        cancelButton.addEventListener('mouseleave', () => {
+            cancelButton.style.backgroundColor = 'white';
+        });
+        
+        confirmButton.addEventListener('mouseenter', () => {
+            confirmButton.style.backgroundColor = '#c82333';
+        });
+        confirmButton.addEventListener('mouseleave', () => {
+            confirmButton.style.backgroundColor = '#dc3545';
+        });
+        
+        // Add event listeners
+        cancelButton.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            resolve(false);
+        });
+        
+        confirmButton.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            resolve(true);
+        });
+        
+        // Close on overlay click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve(false);
+            }
+        });
+        
+        // Close on Escape key
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                document.removeEventListener('keydown', handleKeyDown);
+                document.body.removeChild(overlay);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // Assemble dialog
+        buttonContainer.appendChild(cancelButton);
+        buttonContainer.appendChild(confirmButton);
+        dialog.appendChild(titleElement);
+        dialog.appendChild(messageElement);
+        dialog.appendChild(buttonContainer);
+        overlay.appendChild(dialog);
+        
+        // Add to page
+        document.body.appendChild(overlay);
+        
+        // Focus the confirm button
+        confirmButton.focus();
+    });
+}
+
 // Handle file selection
 function handleFileSelection() {
     const file = fileInput.files[0];
@@ -505,7 +650,13 @@ async function clearChat() {
         return;
     }
     
-    if (!confirm('Are you sure you want to clear the chat history? This action cannot be undone.')) {
+    // Show custom centered confirmation dialog
+    const shouldClear = await showCenteredConfirmDialog(
+        'Clear Chat History',
+        'Are you sure you want to clear the chat history? This action cannot be undone.'
+    );
+    
+    if (!shouldClear) {
         return;
     }
     
