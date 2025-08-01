@@ -63,6 +63,7 @@ mkdir -p "$(dirname "$ENV_FILE_PATH")"
   echo "EMBEDDING_MODEL_DEPLOYMENT_NAME=\"text-embedding-3-small\""
   echo "APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\""
   echo "DEV_TUNNEL_URL=\"\""
+  echo "AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED=\"true\""
 } > "$ENV_FILE_PATH"
 
 # Create fresh root .env file (always overwrite)

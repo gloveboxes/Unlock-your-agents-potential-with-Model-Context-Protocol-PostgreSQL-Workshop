@@ -73,6 +73,7 @@ GPT_MODEL_DEPLOYMENT_NAME="gpt-4o-mini"
 EMBEDDING_MODEL_DEPLOYMENT_NAME="text-embedding-3-small"
 APPLICATIONINSIGHTS_CONNECTION_STRING="$applicationInsightsConnectionString"
 DEV_TUNNEL_URL=""
+AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED="true"
 "@ | Set-Content -Path $ROOT_ENV_FILE_PATH
 
 # Set the C# project path
