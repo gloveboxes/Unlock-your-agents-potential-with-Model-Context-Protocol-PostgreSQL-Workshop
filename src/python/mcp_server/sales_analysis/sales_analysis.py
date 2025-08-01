@@ -141,7 +141,7 @@ async def get_multiple_table_schemas(
 async def execute_sales_query(
     ctx: Context, postgresql_query: Annotated[str, Field(description="A well-formed PostgreSQL query.")]
 ) -> str:
-    """Always fetch table schemas first, use exact column names, join related tables for clarity, aggregate results, limit output to 20 rows, and explain that results are limited for readability.
+    """Always fetch table schemas first, use exact column names, join related tables for clarity, aggregate results, limit output to 20 rows, and explain that results are limited for readability. **STORE TYPE IDENTIFICATION**: Use the retail.store.is_online boolean flag to distinguish between online and physical stores. When is_online = true, the store is online; when is_online = false, the store is physical.
 
     Args:
         postgresql_query: A well-formed PostgreSQL query.

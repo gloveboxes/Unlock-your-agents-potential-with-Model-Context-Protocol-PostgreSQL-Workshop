@@ -451,7 +451,7 @@ class PostgreSQLSchemaProvider:
                 )
 
         enum_fields = [
-            ("available_stores", "Valid Stores"),
+            ("available_stores", "Stores Locations"),
             ("available_categories", "Valid Categories"),
             ("available_product_types", "Valid Product Types"),
             ("available_years", "Available Years"),
